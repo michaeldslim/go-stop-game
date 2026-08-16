@@ -7,6 +7,8 @@ export const CARD_DIMENSIONS: Record<CardSize, { width: number; height: number }
   /** Min 72pt so card text stays readable */
   table: { width: 64, height: 103 },
   small: { width: 44, height: 71 },
+  /** Compact pile thumbnails for captured cards */
+  pile: { width: 32, height: 52 },
 };
 
 export const CARD_BORDER_RADIUS = 6;

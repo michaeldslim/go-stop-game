@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCardById } from '../src/cards/getCardById';
 import { CardView } from '../src/components/CardView';
+import { CollectedPileView } from '../src/components/CollectedPileView';
 import {
   getAiDifficultyOption,
   getGameModeOption,
@@ -53,28 +54,28 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>{language === 'ko' ? '← 설정' : '← Setup'}</Text>
+      <View style={styles.topBar}>
+        <Pressable onPress={() => router.back()} hitSlop={8}>
+          <Text style={styles.back}>{language === 'ko' ? '← 나가기' : '← Leave'}</Text>
         </Pressable>
-        <Text style={styles.title}>{language === 'ko' ? '맞고' : 'Matgo'}</Text>
-        <View style={styles.configRow}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{getLocalizedText(language, modeOption.labels)}</Text>
-          </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              AI · {getLocalizedText(language, difficultyOption.labels)}
-            </Text>
-          </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {language === 'ko' ? `목표 ${game.targetScore}점` : `Target ${game.targetScore}`}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.status}>{game.statusMessage}</Text>
+        <Text style={styles.turnHint} numberOfLines={1}>
+          {game.phase === 'finished'
+            ? language === 'ko'
+              ? '패 종료'
+              : 'Hand finished'
+            : isHumanTurn
+              ? language === 'ko'
+                ? '당신 차례'
+                : 'Your turn'
+              : language === 'ko'
+                ? 'AI 차례…'
+                : 'AI turn…'}
+        </Text>
       </View>
+
+      {game.statusMessage ? (
+        <Text style={styles.status} numberOfLines={2}>{game.statusMessage}</Text>
+      ) : null}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.opponentBar}>
@@ -85,19 +86,17 @@ export default function GameScreen() {
             {game.dealerIndex === 1 ? (
               <Text style={styles.dealerBadge}>{language === 'ko' ? '선' : 'Dealer'}</Text>
             ) : null}
-            <Text style={styles.collectedCount}>
-              {language === 'ko' ? `따낸 패 ${ai.collected.length}` : `Captured ${ai.collected.length}`}
+            <Text style={styles.handCount}>
+              {language === 'ko' ? `손패 ${ai.hand.length}` : `${ai.hand.length} in hand`}
             </Text>
           </View>
-          <Text style={styles.handCount}>
-            {language === 'ko' ? `손패 ${ai.hand.length}장` : `${ai.hand.length} cards`}
-          </Text>
           <View style={styles.aiHandRow}>
             {ai.hand.map((_, index) => (
               <CardView key={`ai-${index}`} card={humanHand[0] ?? getCardById('jan-junk-1')} size="small" faceDown />
             ))}
           </View>
         </View>
+        <CollectedPileView cardIds={ai.collected} />
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -153,20 +152,14 @@ export default function GameScreen() {
               <CardView card={getCardById(game.lastFlippedCardId)} size="small" />
             </View>
           ) : null}
-          <Text style={styles.turnHint}>
-            {game.phase === 'finished'
-              ? language === 'ko'
-                ? '패 종료'
-                : 'Hand finished'
-              : isHumanTurn
-                ? language === 'ko'
-                  ? '당신 차례'
-                  : 'Your turn'
-                : language === 'ko'
-                  ? 'AI 차례…'
-                  : 'AI turn…'}
+          <Text style={styles.targetHint}>
+            {language === 'ko'
+              ? `목표 ${game.targetScore}점 · ${getLocalizedText(language, modeOption.labels)}`
+              : `Target ${game.targetScore} · ${getLocalizedText(language, modeOption.labels)}`}
           </Text>
         </View>
+
+        <CollectedPileView cardIds={human.collected} />
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -175,9 +168,6 @@ export default function GameScreen() {
               {isHumanDealer ? (
                 <Text style={styles.dealerBadge}>{language === 'ko' ? '선' : 'Dealer'}</Text>
               ) : null}
-              <Text style={styles.collectedCount}>
-                {language === 'ko' ? `따낸 패 ${human.collected.length}` : `Captured ${human.collected.length}`}
-              </Text>
               <Text style={styles.sectionMeta}>
                 {language === 'ko' ? `${humanHand.length}장` : `${humanHand.length} cards`}
               </Text>
@@ -209,50 +199,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.felt,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    gap: 6,
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 12,
   },
   back: {
     color: colors.gold,
-    fontSize: 16,
-  },
-  title: {
-    color: colors.cream,
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  configRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  badge: {
-    backgroundColor: 'rgba(201, 162, 39, 0.18)',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.gold,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  badgeText: {
-    color: colors.gold,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
+  },
+  turnHint: {
+    flex: 1,
+    color: colors.cream,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'right',
   },
   status: {
     color: colors.cream,
     opacity: 0.8,
-    fontSize: 14,
+    fontSize: 13,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
   },
   scrollContent: {
-    paddingBottom: 32,
-    gap: 20,
+    paddingBottom: 24,
+    gap: 14,
   },
   opponentBar: {
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 6,
   },
   opponentInfo: {
     flexDirection: 'row',
@@ -267,13 +247,8 @@ const styles = StyleSheet.create({
   },
   handCount: {
     color: colors.cream,
-    opacity: 0.7,
-    fontSize: 13,
-  },
-  collectedCount: {
-    color: colors.gold,
+    opacity: 0.65,
     fontSize: 12,
-    fontWeight: '600',
   },
   aiHandRow: {
     flexDirection: 'row',
@@ -281,7 +256,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   section: {
-    gap: 12,
+    gap: 8,
     paddingHorizontal: 16,
   },
   sectionHeader: {
@@ -360,12 +335,12 @@ const styles = StyleSheet.create({
     opacity: 0.65,
     fontSize: 11,
   },
-  turnHint: {
+  targetHint: {
     flex: 1,
     color: colors.cream,
-    opacity: 0.6,
-    fontSize: 13,
-    lineHeight: 18,
+    opacity: 0.5,
+    fontSize: 12,
+    lineHeight: 16,
     textAlign: 'right',
   },
   handRow: {
