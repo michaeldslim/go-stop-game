@@ -124,14 +124,14 @@ const styles = StyleSheet.create({
     gap: 28,
   },
   startButton: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.gold,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
   },
   startButtonText: {
-    color: colors.cream,
+    color: colors.felt,
     fontSize: 18,
     fontWeight: '700',
   },

@@ -3,6 +3,11 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../src/constants/colors';
+import { CARD_BORDER_RADIUS } from '../src/constants/layout';
+
+/** August bright (8월 광) — copied from assets/cards/3x/aug-bright.png */
+const HOME_LOGO_WIDTH = 136;
+const HOME_LOGO_HEIGHT = 222;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -10,7 +15,12 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.hero}>
-        <Image source={require('../assets/splash-icon.png')} style={styles.logo} contentFit="contain" />
+        <Image
+          source={require('../assets/home-logo.png')}
+          style={styles.logo}
+          contentFit="contain"
+          accessibilityLabel="August bright hwatu card"
+        />
         <Text style={styles.title}>Hwatu</Text>
         <Text style={styles.subtitle}>Korean Go-Stop Card Game</Text>
         <Text style={styles.korean}>화투 · 고스톱</Text>
@@ -46,9 +56,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: HOME_LOGO_WIDTH,
+    height: HOME_LOGO_HEIGHT,
     marginBottom: 8,
+    borderRadius: CARD_BORDER_RADIUS,
   },
   title: {
     fontSize: 48,
@@ -71,13 +82,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   primaryButton: {
-    backgroundColor: colors.red,
+    backgroundColor: colors.gold,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   primaryButtonText: {
-    color: colors.cream,
+    color: colors.felt,
     fontSize: 18,
     fontWeight: '700',
   },

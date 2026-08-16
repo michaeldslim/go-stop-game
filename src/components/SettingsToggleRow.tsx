@@ -18,7 +18,7 @@ export function SettingsToggleRow({ label, description, value, onValueChange }: 
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: 'rgba(255,255,255,0.2)', true: colors.red }}
+        trackColor={{ false: 'rgba(255,255,255,0.2)', true: colors.gold }}
         thumbColor={colors.cream}
       />
     </View>
