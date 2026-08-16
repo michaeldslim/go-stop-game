@@ -2,7 +2,8 @@
 /**
  * Generates app icons from a Hwatu card PNG (default: feb-animal).
  * Outputs: icon.png, splash-icon.png, android-icon-foreground.png,
- *          android-icon-monochrome.png, favicon.png, icon-preview/source/*
+ *          android-icon-monochrome.png, favicon.png, icon-preview/source/*,
+ *          android drawable splashscreen_logo.png (all densities)
  */
 import { mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -14,6 +15,16 @@ const ROOT = join(__dirname, '..');
 const CARD_SRC = join(ROOT, 'assets/cards/master/feb-animal.png');
 const ASSETS = join(ROOT, 'assets');
 const PREVIEW = join(ASSETS, 'icon-preview/source');
+const ANDROID_RES = join(ROOT, 'android/app/src/main/res');
+
+/** Expo splash logo sizes per Android density bucket */
+const ANDROID_SPLASH_SIZES = {
+  'drawable-mdpi': 288,
+  'drawable-hdpi': 432,
+  'drawable-xhdpi': 576,
+  'drawable-xxhdpi': 864,
+  'drawable-xxxhdpi': 1152,
+};
 
 const BG = '#8B1A1A';
 const CREAM = '#F5E6C8';
@@ -138,6 +149,17 @@ async function write(buf, dest) {
   console.log(`✓ ${dest.replace(`${ROOT}/`, '')}`);
 }
 
+async function writeAndroidSplashLogos(splashBuf) {
+  for (const [folder, size] of Object.entries(ANDROID_SPLASH_SIZES)) {
+    const dest = join(ANDROID_RES, folder, 'splashscreen_logo.png');
+    await sharp(splashBuf)
+      .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toFile(dest);
+    console.log(`✓ ${dest.replace(`${ROOT}/`, '')}`);
+  }
+}
+
 async function main() {
   await mkdir(PREVIEW, { recursive: true });
 
@@ -161,7 +183,9 @@ async function main() {
   await write(splash, join(PREVIEW, '04-splash.png'));
   await write(favicon, join(PREVIEW, '05-favicon.png'));
 
-  console.log('\nDone. Run `npx expo prebuild --platform android` to refresh native launcher assets.');
+  await writeAndroidSplashLogos(splash);
+
+  console.log('\nDone. Run `npx expo prebuild --platform android --no-install` to refresh mipmap launcher assets.');
 }
 
 main().catch((err) => {
