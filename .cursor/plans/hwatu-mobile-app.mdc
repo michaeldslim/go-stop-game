@@ -1,0 +1,611 @@
+---
+name: Hwatu Mobile App
+overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 1 완료. Phase 2 — 덱·턴·점수 + AI 난이도(초보~전문가).
+todos:
+  - id: scaffold
+    content: Expo + TypeScript 프로젝트 스캐폴딩, 앱 아이콘, 기본 폴더 구조
+    status: completed
+  - id: card-assets
+    content: 48장 화투 카드 이미지 (512×839 PNG, @1x/@2x/@3x, Wikimedia Hanafuda)
+    status: completed
+  - id: types
+    content: 화투 도메인 타입 정의 (Month, CardType, Card, Deck, Player, GameState, AiDifficulty)
+    status: completed
+  - id: settings-setup
+    content: Settings + Game Setup screens — AI 난이도, 언어, 사운드/햅틱, AsyncStorage
+    status: completed
+  - id: deck-engine
+    content: 48장 덱 생성·셔플·딜링 — Human vs AI (맞고 2P 기본, 고스톱 3P는 1인+AI×2)
+    status: pending
+  - id: board-ui
+    content: 테이블(필드) + 손패 + 수집 더미 UI — 카드 고품질 렌더링
+    status: pending
+  - id: turn-engine
+    content: 턴 진행 — 손패 카드 플레이 → 덱 뒤집기 → 매칭·수집
+    status: pending
+  - id: special-start
+    content: 시작 특수 조건 (4광/4월 자동승, 3장 스택, 무승부)
+    status: pending
+  - id: scoring
+    content: 점수 계산 (광·띠·열끗·피, 고도리, 청단·홍단·초단)
+    status: pending
+  - id: go-stop
+    content: Go/Stop 결정 UI 및 배수·보너스 칩 계산
+    status: pending
+  - id: gameplay-polish
+    content: 카드 애니메이션, 효과음, 햅틱, 터치 피드백
+    status: pending
+  - id: ai-opponent
+    content: AI 대전 — 난이도 4단계 (초보/중급/고급/전문가), 턴·Go/Stop·매칭 휴리스틱
+    status: pending
+  - id: i18n
+    content: 영어/한국어 i18n + 규칙 도움말 화면
+    status: pending
+  - id: advanced-rules
+    content: 고급 규칙 — 쪽·따닥·폭탄·흔들기·조커 (Phase 4)
+    status: pending
+  - id: release
+    content: EAS 빌드, Android/iOS 스토어 배포
+    status: pending
+isProject: true
+---
+
+# Hwatu — Go-Stop Mobile App
+
+## One-liner
+
+**Hwatu** is a mobile Go-Stop (고스톱) card game built with React Native + Expo. **Always Human vs AI** — you play against the computer at a chosen difficulty. Match Korean flower cards (화투) by month, collect scoring combinations, and decide when to **Stop** or risk it with **Go**.
+
+Rules references:
+- [화투(고스톱) 치는 방법 — 도까함 (Korean, primary)](https://ruabin1001.com/entry/%ED%99%94%ED%88%AC%EA%B3%A0%EC%8A%A4%ED%86%B1-%EC%B9%98%EB%8A%94-%EB%B0%A9%EB%B2%95-%EA%B3%A0%EC%8A%A4%ED%86%B1-%EB%A3%B0%EA%B3%BC-%EC%A0%90%EC%88%98%EB%82%B4%EA%B8%B0-%ED%8C%A8-%EB%86%93%EB%8A%94-%EB%B0%A9%EB%B2%95)
+- [How to Play Go-Stop — Instructables](https://www.instructables.com/How-to-Play-Go-Stop/)
+
+---
+
+## Goals
+
+| Priority | Goal |
+|----------|------|
+| **P0** | High-quality card artwork — crisp on all phone densities |
+| **P0** | Faithful Go-Stop rules (Korean standard — 도까함 guide + Instructables) |
+| **P0** | **Human vs AI only** — no local pass-and-play between humans |
+| **P1** | Smooth touch UX for selecting hand cards and table matches |
+| **P1** | **AI difficulty** — 초보 / 중급 / 고급 / 전문가 (settings + per-game setup) |
+| **P1** | 맞고 (2P vs AI) primary; 고스톱 (1 human + 2 AI) optional later |
+| **P2** | Advanced rules (쪽·폭탄·흔들기), online multiplayer (out of scope v1) |
+
+---
+
+## Tech Stack
+
+| Layer | Choice | Notes |
+|-------|--------|-------|
+| Framework | Expo SDK 57 | `expo run:android` / `expo run:ios` |
+| Language | TypeScript (strict) | Domain logic fully typed |
+| Navigation | Expo Router | Home → Game → Result, Settings, Rules |
+| Card images | `expo-image` | `contentFit="contain"`, caching, blur placeholder |
+| Animation | RN `Animated` / Reanimated | Flip, slide, collect pile |
+| Audio | `expo-audio` | card flip, match, go/stop |
+| Haptics | `expo-haptics` | match, go declaration |
+| State | Zustand or reducer | Game engine isolated from UI |
+| Settings | AsyncStorage | language, **AI difficulty**, sound, haptics, default game mode |
+| i18n | Custom provider or i18next | `en` / `ko` |
+
+---
+
+## The Hwatu Deck
+
+### Overview
+
+- **48 cards** — 4 cards per month (January–December)
+- Cards are matched by **month** (same flower/theme), not by sub-type
+- Korean Hwatu decks may include **bonus/joker cards** (Phase 4)
+
+### Card Types (4 sub-categories)
+
+| Type | Korean | Identification | Count |
+|------|--------|----------------|-------|
+| **Bright** | 광 (Gwang) | Chinese character 光 on red circle | 5 total |
+| **Animal** | 열끗 (Yeol-kkeut) | Animals or special illustrations | 9 total (8 fixed + 1 flexible) |
+| **Ribbon** | 띠 (Tti) | Blue or red ribbon bands | 10 total |
+| **Junk** | 피 (Pi) | Plain filler cards | **25 pi total** (22 plain + 3 쌍피) |
+
+> **September cup (9월 국화잔)** — card id `sep-animal-double`: scored as **열끗 (animal)** OR **쌍피 (+2 pi)** at collection. Third 쌍피 alongside `nov-junk-double` and `dec-junk-double`.
+
+### Card Art (implemented)
+
+Traditional Hanafuda-style artwork sourced from [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:SVG_Hanafuda) (Louie Mantia, Jr. and contributors, Korean hwatu adaptations by Marcus Richert). **CC BY-SA 4.0** — see `assets/cards/ATTRIBUTION.md`. Do not copy [도까함 blog](https://ruabin1001.com/entry/%ED%99%94%ED%88%AC%EA%B3%A0%EC%8A%A4%ED%86%B1-%EC%B9%98%EB%8A%94-%EB%B0%A9%EB%B2%95-%EA%B3%A0%EC%8A%A4%ED%86%B1-%EB%A3%B0%EA%B3%BC-%EC%A0%90%EC%88%98%EB%82%B4%EA%B8%B0-%ED%8C%A8-%EB%86%93%EB%8A%94-%EB%B0%A9%EB%B2%95) images (CC BY-NC-ND).
+
+Use the 도까함 guide (광·띠·열끗·피 sections) as **rules reference only**, not as artwork source.
+
+**Double-card ids** (count as 2 pi when scored as junk):
+
+| Card id | Korean | Notes |
+|---------|--------|-------|
+| `sep-animal-double` | 국화잔 | type `animal`, `flexPiAnimal` — 열끗 or 쌍피 |
+| `nov-junk-double` | 쌍피 | |
+| `dec-junk-double` | 쌍피 | |
+
+### Month → Cards Map (implementation reference)
+
+Each month has exactly 4 cards. Store as data, not hard-coded in UI:
+
+```
+January  (1):  Bright, Ribbon(red+writing), Junk×2
+February (2):  Animal(nightingale), Ribbon(red+writing), Junk×2
+March    (3):  Bright, Ribbon(red+writing), Junk×2
+April    (4):  Animal(cuckoo), Ribbon(blue), Junk×2
+May      (5):  Animal, Ribbon(blue), Junk×2
+June     (6):  Animal, Ribbon(blue), Junk×2
+July     (7):  Animal, Ribbon(plain red), Junk×2
+August   (8):  Animal(geese), Bright, Ribbon(plain red), Junk
+September(9):  Animal-double(cup, flex 열끗/쌍피 → sep-animal-double), Ribbon(plain red), Junk×2
+October  (10): Animal(deer), Junk×3
+November (11): Animal, Junk×2 + double-junk (counts as 2 피)
+December (12): Bright(rain), Junk×2 + double-junk (counts as 2 피)
+```
+
+> **Rain Bright** (December): 3 Brights including rain = 2 points (비광). 3 Brights without rain = 3 points.
+
+---
+
+## Card Image Quality Strategy (Critical)
+
+### Asset Spec
+
+| Asset | Resolution | Format | Notes |
+|-------|------------|--------|-------|
+| Master art | **512 × 839** px per card | PNG (lossless) | Wikimedia hanafuda aspect (~0.61) |
+| `@3x` | 512 × 839 | PNG | Primary source for phones |
+| `@2x` | 341 × 560 | PNG | Generated from master |
+| `@1x` | 171 × 280 | PNG | Thumbnail / low-memory |
+| Card back | 512 × 839 | PNG | `back/card-back.png` (+ @2x/@3x) |
+
+### Rendering Rules
+
+- Use **`expo-image`** (not bare `Image`) for disk cache + transition
+- **Never** upscale beyond `@3x` — always ship sharp source art
+- Table cards: min display height **72pt** (@3x = 216px) — below this, text on cards is unreadable
+- Hand cards: min height **88pt** for comfortable touch targets
+- Provide **subtle drop shadow** via wrapper View, not baked into PNG (keeps assets reusable)
+- **Border radius** applied in CSS (`borderRadius: 6`) — do not bake rounded corners into master PNG
+
+### Asset Pipeline
+
+```
+assets/cards/
+  master/           # 48 PNGs at 512×839 (source of truth)
+  3x/               # same as master (512×839)
+  2x/               # 341×560
+  1x/               # 171×280
+  back/
+    card-back.png
+  ATTRIBUTION.md    # CC BY-SA 4.0 credit
+scripts/
+  import-card-source.mjs   # optional: WebP staging → master PNG
+  generate-card-sizes.sh     # master → 1x/2x/3x (sips)
+  generate-placeholder-cards.mjs  # legacy SVG generator (unused)
+src/
+  cards/
+    cardCatalog.ts         # 48 card definitions + ids
+    getCardImage.ts        # density-aware require() map
+  components/
+    CardView.tsx           # expo-image card renderer
+    ScreenHeader.tsx       # back + title header
+    OptionPicker.tsx       # segmented option list
+    SettingsToggleRow.tsx  # switch row for settings
+  constants/
+    colors.ts
+    layout.ts
+    gameOptions.ts         # AI difficulty, game mode, language labels (EN/KO)
+  settings/
+    SettingsProvider.tsx   # AsyncStorage-backed settings context
+  types/
+    hwatu.ts               # CardDefinition, Month, CardType
+    game.ts                # AiDifficulty, GameMode, AppSettings
+app/
+  index.tsx                # Home
+  setup.tsx                # Game setup (mode + AI difficulty)
+  settings.tsx             # Settings (defaults, language, sound, haptics)
+  game.tsx                 # Card preview (Phase 1); gameplay (Phase 2)
+  rules.tsx                # Rules placeholder
+```
+
+**Import workflow** (if replacing art): stage WebP in `assets/cards/source/` with Wikimedia Hanafuda filenames → `npm run import:cards`. Hanafuda→Hwatu id mapping lives in `import-card-source.mjs` (e.g. August ribbon reuses July Tanzaku; October 3rd junk uses October Tanzaku).
+
+---
+
+---
+
+## Play Model — Human vs AI
+
+This app is **always Human vs AI**. There is no couch co-op or hot-seat multiplayer.
+
+| Role | Description |
+|------|-------------|
+| **Human** | One local player — hand at bottom, full touch control |
+| **AI** | All other seats — automated turns, visible collected piles & scores |
+
+### Session layout
+
+| Mode | Korean | Seats | Hand | Table | Target | Ship in |
+|------|--------|-------|------|-------|--------|---------|
+| **Matgo** (default) | 맞고 | Human + **1 AI** | 10 each | 8 | **7** | **Phase 2** |
+| **Go-Stop** | 고스톱 | Human + **2 AI** | 7 each | 6 | **3** | Phase 3 (optional) |
+
+Settlement (고박·피박·광박) applies between human and AI opponent(s) using standard rules.
+
+### AI difficulty
+
+Selectable in **Game Setup** and default in **Settings**. Persist with AsyncStorage.
+
+| Level | Korean | English | Behavior (summary) |
+|-------|--------|---------|-------------------|
+| `beginner` | 초보 | Beginner | Obvious matches; weak yaku awareness; calls Stop early; occasional random plays |
+| `intermediate` | 중급 | Intermediate | Solid matching; basic yaku chasing; reasonable Go/Stop |
+| `advanced` | 고급 | Advanced | Optimizes yaku & pi; better match choice (싼 것 avoidance); strategic Go |
+| `expert` | 전문가 | Expert | Strong lookahead; maximizes score & penalties; optimal Go/Stop; uses special moves when implemented |
+
+Implementation: `src/game/ai.ts` + `AiDifficulty` type. Each level tunes weights / search depth / mistake rate — not separate codebases.
+
+```ts
+type AiDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
+```
+
+---
+
+## Game Rules (Korean standard — 도까함 + Instructables)
+
+### Game Modes (Human vs AI)
+
+| Mode | Korean | Human | AI opponents | Hand | Table | Target |
+|------|--------|-------|--------------|------|-------|--------|
+| **Matgo** | 맞고 | 1 | 1 | 10 each | 8 | **7 points** |
+| **Go-Stop** | 고스톱 | 1 | 2 | 7 each | 6 | **3 points** |
+
+> v1 focus: **맞고 (2P)**. 3P 고스톱 adds two AI seats with same difficulty setting.
+
+### Setup & Dealing
+
+1. **Choose dealer (선)**: Flip cards face-down; highest card drawn becomes dealer.
+2. Dealer shuffles; player to dealer's **left** cuts the deck onto the table.
+3. Deal counterclockwise, starting with player to dealer's **right**.
+4. If a **bonus card** appears on the table during deal, dealer takes it and replaces from deck until table has correct count.
+5. Remaining cards form the **center deck** (face down).
+
+| Seats | Hand each | Table (face up) |
+|-------|-----------|-----------------|
+| 2 (맞고, **default**) | 10 | 8 |
+| 3 (고스톱, 1 human + 2 AI) | 7 | 6 |
+
+### Pre-play Special Conditions
+
+Check after deal, before first turn:
+
+| Condition | Result |
+|-----------|--------|
+| Player holds all 4 cards of one month | **Automatic win** |
+| Every player holds 4 of a month | **Draw** |
+| Table shows 4 of one month | **No winner** — redeal |
+| Table shows 3 of one month | Stack the 3; fourth match collects the stack |
+
+### Turn Flow
+
+Each turn (dealer first, then counterclockwise):
+
+1. **Play** one card from hand onto the table
+2. **Flip** top card from center deck onto the table
+3. **Collect** any matches made (by month)
+4. Check score → if ≥ target, offer **Go** or **Stop**
+5. End when a player Stops, hands empty, or nagari (no one reached target)
+
+### Matching Rules
+
+- Match cards by **month** (same flower theme)
+- If a pair already on table and hand card matches: player **chooses** which table card to pair with
+- If pair on table and flipped card matches: leave flipped card, **stack all 3** (싸다 / 뻑)
+- No match in hand: still play a card to table; hope flip matches
+- **싼 것**: Taking the cheaper/easier match when a choice exists → each opponent pays **1 피**
+
+### Target Score
+
+| Mode | Target |
+|------|--------|
+| Go-Stop (3P) | **3 points** |
+| Matgo (2P) | **7 points** |
+
+### Go / Stop (고 / 스톱)
+
+When a player reaches the target score:
+
+- **Stop (스톱)**: End game. Winner settles with all opponents.
+- **Go (고)**: Continue — must score **higher** than current total before Go/Stop again. Risk **고박** if opponent reaches target first.
+
+**Go bonuses** (Korean standard):
+
+| Go count | Effect |
+|----------|--------|
+| 1고 | +1 point |
+| 2고 | +1 point (cumulative) |
+| 3고+ | Score **×2** (4고 = ×4, 5고 = ×8, …) |
+
+**나가리 (Nagari)**: No one scores, or a Go caller fails to increase score → hand is void; **next hand pays double**.
+
+### Settlement Penalties (정산)
+
+| Penalty | Korean | Condition |
+|---------|--------|-----------|
+| **Go Bak** | 고박 | Non-Go player wins while you have called Go → you pay **everyone's settlement** |
+| **Pi Bak** | 피박 | Winner scored with 피; opponents with **≤6 피** pay **2×** |
+| **Gwang Bak** | 광박 | Winner scored with 광; opponents with **0 광** pay **2×** |
+
+### Special Moves (each awards 1 피 from every opponent unless noted)
+
+| Move | Korean | Trigger |
+|------|--------|---------|
+| **Chok** | 쪽 | Play unmatched card; flipped card matches the played card |
+| **Ttadak** | 따닥 | 2 same-month on table; play + flip both match → take all 4 |
+| **Sweep** | 싹쓸이 | End turn with **empty table** |
+| **Shake** | 흔들기 | Hold 3 of same month; declare before playing (show cards) → **2× score** if win |
+| **Bomb** | 폭탄 | Hold 3 of same month + 1 on table; play all 3 → flip deck **twice** without playing → **2× score** if win |
+| **Stack** | 뻑 / 싸다 | Play + flip same month as table card when 3 would stack → cannot take; taker gets 1 피 from each opponent |
+
+### Scoring Hands (Yaku)
+
+#### Bright (광)
+
+| Hand | Points |
+|------|--------|
+| 3 Brights (no rain) | 3 |
+| 3 Brights (with December rain) | 2 (비광) |
+| 4 Brights | 4 |
+| 5 Brights (오광) | 15 |
+
+#### Animal (열끗)
+
+| Hand | Points |
+|------|--------|
+| 5 animals | 1 |
+| Each animal beyond 5 | +1 each |
+| **7+ animals** | **Final score ×2** (몽고 / 맞고 배수) |
+| **Godori** (Feb + Apr + Aug animals) | 5 |
+
+> September cup: count as 열끗 **or** 쌍피 (+2) — chosen at collection time.
+
+#### Ribbon (띠)
+
+| Hand | Points |
+|------|--------|
+| 5 ribbons | 1 |
+| Each ribbon beyond 5 | +1 each |
+| **Hongdan** — 3 red ribbons with writing (Jan, Feb, Mar) | 3 |
+| **Cheongdan** — 3 blue ribbons (Apr, May, Jun) | 3 |
+| **Chodan** — 3 plain red ribbons (Jul, Sep; variant includes Aug) | 3 |
+
+#### Junk (피)
+
+| Hand | Points |
+|------|--------|
+| 10 pi | 1 |
+| Each pi beyond 10 | +1 each |
+| **쌍피** (Nov, Dec, Sep cup-as-pi) | Counts as **2 pi** each |
+
+### Hwatu Simple Variant (Phase 2 optional mode)
+
+No Go/Stop — play until cards exhausted. Per-card scoring:
+
+| Type | Points |
+|------|--------|
+| Bright | 20 each |
+| Animal | 10 each |
+| Ribbon | 5 each |
+| Junk | 10 cards = 5 pts; each extra = 1 |
+
+---
+
+## Screen Flow
+
+```
+[Home] ──▶ [Game Setup] ──▶ [Game] ──▶ [Result]
+  │              │              │
+  ├── [Rules]    │              └── Go/Stop modal
+  └── [Settings]─┘              (human only; AI auto-decides)
+```
+
+### Home Screen ✅
+
+- App title **Hwatu** + hero card art
+- **Play** → setup (**game mode**, **AI difficulty** 초보/중급/고급/전문가)
+- **Rules** → scrollable guide (placeholder; full i18n in Phase 3)
+- **Settings** → language, default AI difficulty, sound, haptics
+
+### Game Setup Screen ✅
+
+- **Game mode**: 맞고 (vs 1 AI) — default; 고스톱 (vs 2 AI) — disabled, Phase 3
+- **AI difficulty**: 초보 · 중급 · 고급 · 전문가 (`OptionPicker`)
+- **Start** → card preview with mode/difficulty badges (Phase 2: deal and begin)
+- Link to Settings for changing defaults
+
+### Game Screen (portrait) — 맞고 2P example
+
+```
+┌─────────────────────────────┐
+│  AI [초보]     score: 3     │  ← opponent top; difficulty badge
+├─────────────────────────────┤
+│                             │
+│     TABLE (face-up cards)   │
+│                             │
+├─────────────────────────────┤
+│  [AI collected]  deck:#      │
+├─────────────────────────────┤
+│  YOUR HAND (fan layout)     │
+│  Score: 5  [Go] [Stop]      │  ← human only when score ≥ target
+└─────────────────────────────┘
+```
+
+3P 고스톱: two AI rows at top (same difficulty).
+
+### Go/Stop Modal
+
+When score ≥ target, block further play until decision:
+
+```
+┌──────────────────────────┐
+│  You have 5 points!      │
+│                          │
+│  [  Stop  ]  [  Go!  ]   │
+│                          │
+│  Go risk: opponent may   │
+│  reach target first      │
+└──────────────────────────┘
+```
+
+---
+
+## Domain Types
+
+**Implemented** (`src/types/hwatu.ts`, `src/types/game.ts`):
+
+```ts
+type Month = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
+type CardType = 'bright' | 'animal' | 'ribbon' | 'junk';
+type CardId = string; // e.g. 'jan-bright', 'sep-animal-double', 'nov-junk-double'
+type AiDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
+type GameMode = 'matgo' | 'gostop';
+type AppLanguage = 'en' | 'ko';
+
+interface CardDefinition { /* id, month, type, piValue, labels, flags */ }
+interface AppSettings { language, defaultAiDifficulty, defaultGameMode, soundEnabled, hapticsEnabled }
+```
+
+**Phase 2** (game engine):
+
+```ts
+interface PlayerState {
+  id: string;
+  isHuman: boolean;
+  hand: CardId[];
+  collected: CardId[];
+  goCount: number;
+  score: number;
+}
+
+interface GameState {
+  phase: 'dealing' | 'playing' | 'goStopPrompt' | 'finished';
+  mode: GameMode;
+  aiDifficulty: AiDifficulty;
+  players: PlayerState[];  // index 0 = human; rest = AI
+  table: TableCard[];
+  deck: CardId[];
+  currentPlayerIndex: number;
+  targetScore: number;
+  dealerIndex: number;
+}
+```
+
+---
+
+## Implementation Phases
+
+### Phase 1 — Foundation ✅
+
+- [x] Expo + TypeScript scaffold
+- [x] App icons (Hwatu branding)
+- [x] Card catalog (`cardCatalog.ts` — 48 cards, correct month/type/flags)
+- [x] Card artwork pipeline (512×839 PNG, @1x/@2x/@3x, Wikimedia Hanafuda)
+- [x] `CardView` component with `expo-image`
+- [x] Home screen → Setup → card preview (`app/index.tsx` → `app/setup.tsx` → `app/game.tsx`)
+- [x] Rules placeholder screen (`app/rules.tsx`)
+- [x] Domain types (`src/types/hwatu.ts` — `CardDefinition`, flags)
+- [x] Game/settings types (`src/types/game.ts` — `AiDifficulty`, `GameMode`, `AppSettings`)
+- [x] Settings screen (`app/settings.tsx` — default AI difficulty, language, sound, haptics)
+- [x] Game setup screen (`app/setup.tsx` — mode + AI difficulty: 초보/중급/고급/전문가)
+- [x] Settings persistence (`src/settings/SettingsProvider.tsx` — AsyncStorage)
+- [x] Shared UI (`ScreenHeader`, `OptionPicker`, `SettingsToggleRow`)
+- [x] Localized option labels (`src/constants/gameOptions.ts` — EN/KO labels for pickers)
+
+### Phase 2 — Core Gameplay (Human vs AI) (current)
+
+- [ ] Deck, shuffle, deal — **맞고 2P** (human + 1 AI)
+- [ ] Table layout + hand fan UI
+- [ ] Turn engine: play → flip → collect (human + AI turns)
+- [ ] **AI opponent** — all 4 difficulty levels (basic heuristics)
+- [ ] Pre-play special conditions
+- [ ] Scoring engine (all yaku)
+- [ ] Go/Stop — human modal; AI auto-decision by difficulty
+- [ ] Result screen (win/loss vs AI)
+- [ ] Sound + haptics
+
+### Phase 3 — Polish & Expansion
+
+- [ ] Card deal / flip / collect animations
+- [ ] AI tuning per difficulty (lookahead, mistake rate, Go/Stop policy)
+- [ ] 고스톱 3P (human + 2 AI, same difficulty)
+- [ ] i18n (EN/KO) + Rules screen content
+- [ ] Hwatu simple variant vs AI
+
+### Phase 4 — Advanced Rules
+
+Most special moves are now documented above (쪽·따닥·폭탄·흔들기·뻑·싹쓸이). Phase 4 implements them in the engine:
+
+- [ ] 쪽, 따닥, 싹쓸이, 뻑/싸다 — pi payments
+- [ ] 흔들기, 폭탄 — 2× score multiplier on win
+- [ ] September cup role choice (열끗 vs 쌍피)
+- [ ] 고박, 피박, 광박 settlement penalties
+- [ ] 나가리 (void hand, next hand 2×)
+- [ ] Bonus/joker cards (Korean deck extras)
+
+### Phase 5 — Release
+
+- [ ] EAS Build (Android → iOS)
+- [ ] Play Store / App Store listing
+- [x] Attribution in app (Settings — CC BY-SA card art credit)
+- [ ] Optional: custom branded card artwork (replace PNGs only)
+
+---
+
+## Visual Design
+
+| Element | Direction |
+|---------|-----------|
+| **Palette** | Deep red `#8B1A1A`, gold `#C9A227`, cream table `#F5E6C8`, dark green felt `#1B4D3E` |
+| **Typography** | System sans for UI; card art carries Korean/Chinese characters |
+| **Table** | Felt texture background, cards cast soft shadow |
+| **Icon** | Stylized hwatu card fan with cherry blossom / maple motif |
+
+---
+
+## Acceptance Criteria — Phase 1 ✅
+
+- [x] Expo app runs on Android emulator and iOS simulator
+- [x] App icon and splash display correctly
+- [x] Single card renders sharply at @3x on a 390pt-wide phone
+- [x] `cardCatalog.ts` lists all 48 cards with correct month/type
+- [x] Home screen navigates to Setup → game card preview
+- [x] Setup screen — game mode + **AI difficulty** picker
+- [x] Default difficulty (and language, sound, haptics) persists in Settings
+
+## Acceptance Criteria — Phase 2
+
+- [ ] **맞고** full game vs AI playable start to finish
+- [ ] All four AI difficulties selectable and behave noticeably different
+- [ ] Correct dealing (10 hand / 8 table) and turn order (human ↔ AI)
+- [ ] Matching, stacking, and collection work for both sides
+- [ ] Score matches manual calculation for all yaku
+- [ ] Human Go/Stop modal at target; AI decides Go/Stop without blocking UI
+- [ ] Result screen shows win/loss vs AI
+
+---
+
+## References
+
+- [화투(고스톱) 치는 방법 — 도까함](https://ruabin1001.com/entry/%ED%99%94%ED%88%AC%EA%B3%A0%EC%8A%A4%ED%86%B1-%EC%B9%98%EB%8A%94-%EB%B0%A9%EB%B2%95-%EA%B3%A0%EC%8A%A4%ED%86%B1-%EB%A3%B0%EA%B3%BC-%EC%A0%90%EC%88%98%EB%82%B4%EA%B8%B0-%ED%8C%A8-%EB%86%93%EB%8A%94-%EB%B0%A9%EB%B2%95) (primary — Korean rules, card types, special moves)
+- [How to Play Go-Stop — Instructables](https://www.instructables.com/How-to-Play-Go-Stop/)
+- [Wikimedia Commons — SVG Hanafuda](https://commons.wikimedia.org/wiki/Category:SVG_Hanafuda) (card artwork, CC BY-SA 4.0)
+- [Go-Stop — Wikipedia](https://en.wikipedia.org/wiki/Go-Stop)
+
+---
+
+## Next Step
+
+**Phase 2** — Human vs AI 맞고: deck + deal, board UI, turn engine, **AI (초보/중급/고급/전문가)**, scoring, Go/Stop, result.
