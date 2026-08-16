@@ -1,5 +1,5 @@
 export type AiDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
-export type GameMode = 'matgo' | 'gostop';
+export type GameMode = 'matgo' | 'gostop' | 'hwatu';
 export type AppLanguage = 'en' | 'ko';
 
 export interface AppSettings {

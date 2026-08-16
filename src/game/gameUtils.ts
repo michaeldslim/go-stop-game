@@ -1,20 +1,18 @@
-import type { MatgoGameState } from '../types/gameState';
+import type { MatgoGameState, PlayerIndex, PlayerState } from '../types/gameState';
+
+export function clonePlayerState(player: PlayerState): PlayerState {
+  return {
+    ...player,
+    hand: [...player.hand],
+    collected: [...player.collected],
+    flexCardRoles: { ...player.flexCardRoles },
+  };
+}
 
 export function cloneGameState(state: MatgoGameState): MatgoGameState {
   return {
     ...state,
-    players: [
-      {
-        ...state.players[0],
-        hand: [...state.players[0].hand],
-        collected: [...state.players[0].collected],
-      },
-      {
-        ...state.players[1],
-        hand: [...state.players[1].hand],
-        collected: [...state.players[1].collected],
-      },
-    ],
+    players: state.players.map(clonePlayerState),
     table: state.table.map((tableCard) => ({
       ...tableCard,
       stackedCardIds: tableCard.stackedCardIds ? [...tableCard.stackedCardIds] : undefined,
@@ -22,17 +20,39 @@ export function cloneGameState(state: MatgoGameState): MatgoGameState {
     deck: [...state.deck],
     pendingAction: state.pendingAction ? { ...state.pendingAction } : null,
     soundEffects: [],
+    turnSpecialMoves: [],
   };
 }
 
-export function getCurrentPlayer(state: MatgoGameState) {
+export function getCurrentPlayer(state: MatgoGameState): PlayerState {
   return state.players[state.currentPlayerIndex];
 }
 
-export function opponentIndex(playerIndex: 0 | 1): 0 | 1 {
+export function nextPlayerIndex(state: MatgoGameState, fromIndex: PlayerIndex): PlayerIndex {
+  return (fromIndex + 1) % state.playerCount;
+}
+
+export function opponentIndices(state: MatgoGameState, playerIndex: PlayerIndex): PlayerIndex[] {
+  return state.players.map((_, index) => index).filter((index) => index !== playerIndex);
+}
+
+/** @deprecated Use nextPlayerIndex — kept for 2P call sites during migration */
+export function opponentIndex(playerIndex: PlayerIndex): PlayerIndex {
   return playerIndex === 0 ? 1 : 0;
 }
 
 export function isGamePlayable(state: MatgoGameState): boolean {
   return state.phase === 'playing' && state.pendingAction === null;
+}
+
+export function allHandsEmpty(state: MatgoGameState): boolean {
+  return state.players.every((player) => player.hand.length === 0);
+}
+
+export function getHumanPlayer(state: MatgoGameState): PlayerState {
+  return state.players.find((player) => player.isHuman) ?? state.players[0];
+}
+
+export function getAiPlayers(state: MatgoGameState): PlayerState[] {
+  return state.players.filter((player) => !player.isHuman);
 }

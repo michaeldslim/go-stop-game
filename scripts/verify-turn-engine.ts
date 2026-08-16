@@ -57,7 +57,14 @@ for (let seed = 0; seed < 50; seed += 1) {
       const cardId = player.hand[0];
       state = playHandCard(state, cardId);
       while (state.pendingAction) {
-        state = chooseTableForPending(state, state.pendingAction.matchIndices[0]);
+        if (
+          state.pendingAction.type === 'chooseHandMatch' ||
+          state.pendingAction.type === 'chooseFlipMatch'
+        ) {
+          state = chooseTableForPending(state, state.pendingAction.matchIndices[0]);
+        } else {
+          break;
+        }
       }
     } else {
       state = runAiTurn(state);

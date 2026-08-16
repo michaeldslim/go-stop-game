@@ -4,6 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCardById } from '../src/cards/getCardById';
 import { CardView } from '../src/components/CardView';
 import { CollectedPileView } from '../src/components/CollectedPileView';
+import { GoStopModal } from '../src/components/GoStopModal';
+import { HandFanView } from '../src/components/HandFanView';
+import { LayoutAnchor, LayoutAnchorProvider, anchorKeys } from '../src/components/LayoutAnchor';
+import { SepCupModal } from '../src/components/SepCupModal';
+import { SpecialMoveBar } from '../src/components/SpecialMoveBar';
+import { TurnAnimationOverlay } from '../src/components/TurnAnimationOverlay';
 import {
   getAiDifficultyOption,
   getGameModeOption,
@@ -13,11 +19,15 @@ import { colors } from '../src/constants/colors';
 import { expandTableCard } from '../src/game/tableCards';
 import { canChooseTableIndex } from '../src/game/turnEngine';
 import { useMatgoGame } from '../src/game/useMatgoGame';
-import { useSettings } from '../src/settings/SettingsProvider';
+import { useTranslation } from '../src/i18n/useTranslation';
 import type { AiDifficulty, GameMode } from '../src/types/game';
+import type { PlayerState } from '../src/types/gameState';
 
 function parseMode(value: string | string[] | undefined): GameMode {
-  return value === 'gostop' ? 'gostop' : 'matgo';
+  if (value === 'gostop' || value === 'hwatu') {
+    return value;
+  }
+  return 'matgo';
 }
 
 function parseDifficulty(value: string | string[] | undefined): AiDifficulty {
@@ -32,164 +42,270 @@ function parseDifficulty(value: string | string[] | undefined): AiDifficulty {
   return 'intermediate';
 }
 
+function parseHandMultiplier(value: string | string[] | undefined): number {
+  const parsed = Number(Array.isArray(value) ? value[0] : value);
+  return parsed > 1 ? parsed : 1;
+}
+
 export default function GameScreen() {
+  return (
+    <LayoutAnchorProvider>
+      <GameScreenContent />
+    </LayoutAnchorProvider>
+  );
+}
+
+function OpponentBar({
+  player,
+  playerIndex,
+  isDealer,
+  difficultyLabel,
+  dealerLabel,
+  pointsLabel,
+  handCountLabel,
+}: {
+  player: PlayerState;
+  playerIndex: number;
+  isDealer: boolean;
+  difficultyLabel: string;
+  dealerLabel: string;
+  pointsLabel: string;
+  handCountLabel: string;
+}) {
+  return (
+    <View style={styles.opponentBar}>
+      <View style={styles.opponentInfo}>
+        <Text style={styles.opponentName}>
+          {player.name} · {difficultyLabel}
+        </Text>
+        {isDealer ? <Text style={styles.dealerBadge}>{dealerLabel}</Text> : null}
+        <Text style={styles.scoreBadge}>{pointsLabel}</Text>
+        <Text style={styles.handCount}>{handCountLabel}</Text>
+      </View>
+      <LayoutAnchor anchorKey={anchorKeys.aiHand(playerIndex)} style={styles.aiHandRow}>
+        {player.hand.map((_, index) => (
+          <CardView key={`ai-${playerIndex}-${index}`} card={getCardById('jan-junk-1')} size="small" faceDown />
+        ))}
+      </LayoutAnchor>
+    </View>
+  );
+}
+
+function GameScreenContent() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ mode?: string; difficulty?: string }>();
-  const { settings } = useSettings();
-  const { language } = settings;
+  const params = useLocalSearchParams<{
+    mode?: string;
+    difficulty?: string;
+    handMultiplier?: string;
+  }>();
+  const { t, language } = useTranslation();
 
   const mode = parseMode(params.mode);
   const difficulty = parseDifficulty(params.difficulty);
+  const handMultiplier = parseHandMultiplier(params.handMultiplier);
   const modeOption = getGameModeOption(mode);
   const difficultyOption = getAiDifficultyOption(difficulty);
 
-  const { game, playCard, chooseTable, playableHandCardIds, isHumanTurn, needsTableChoice } =
-    useMatgoGame(difficulty);
+  const {
+    game,
+    playCard,
+    chooseTable,
+    callGo,
+    callStop,
+    callShake,
+    callBomb,
+    chooseSepCup,
+    playableHandCardIds,
+    isHumanTurn,
+    needsTableChoice,
+    showGoStopModal,
+    showSepCupModal,
+    canShake,
+    canBomb,
+    isAnimating,
+    activeFlight,
+    onFlightComplete,
+    inFlightCardId,
+  } = useMatgoGame(mode, difficulty, handMultiplier);
 
-  const human = game.players[0];
-  const ai = game.players[1];
-  const humanHand = human.hand.map(getCardById);
-  const isHumanDealer = game.dealerIndex === 0;
+  const human = game.players.find((player) => player.isHuman) ?? game.players[0];
+  const humanIndex = game.players.findIndex((player) => player.isHuman);
+  const opponents = game.players.filter((player) => !player.isHuman);
   const playableSet = new Set(playableHandCardIds);
+  const hiddenCards = inFlightCardId ? new Set([inFlightCardId]) : undefined;
+  const difficultyLabel = getLocalizedText(language, difficultyOption.labels);
+
+  if (game.phase === 'finished') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <Text style={styles.loadingText}>{t('game.loadingResults')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.back}>{language === 'ko' ? '← 나가기' : '← Leave'}</Text>
+        <Pressable onPress={() => router.back()} hitSlop={8} disabled={isAnimating}>
+          <Text style={styles.back}>{t('game.leave')}</Text>
         </Pressable>
         <Text style={styles.turnHint} numberOfLines={1}>
-          {game.phase === 'finished'
-            ? language === 'ko'
-              ? '패 종료'
-              : 'Hand finished'
+          {game.phase === 'goStopPrompt'
+            ? t('game.goStop')
             : isHumanTurn
-              ? language === 'ko'
-                ? '당신 차례'
-                : 'Your turn'
-              : language === 'ko'
-                ? 'AI 차례…'
-                : 'AI turn…'}
+              ? t('game.yourTurn')
+              : t('game.aiTurn')}
         </Text>
       </View>
 
       {game.statusMessage ? (
-        <Text style={styles.status} numberOfLines={2}>{game.statusMessage}</Text>
+        <Text style={styles.status} numberOfLines={2}>
+          {game.statusMessage}
+        </Text>
       ) : null}
 
+      <SpecialMoveBar
+        language={language}
+        canShake={canShake}
+        canBomb={canBomb}
+        onShake={callShake}
+        onBomb={callBomb}
+        disabled={!isHumanTurn || isAnimating}
+      />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.opponentBar}>
-          <View style={styles.opponentInfo}>
-            <Text style={styles.opponentName}>
-              AI · {getLocalizedText(language, difficultyOption.labels)}
-            </Text>
-            {game.dealerIndex === 1 ? (
-              <Text style={styles.dealerBadge}>{language === 'ko' ? '선' : 'Dealer'}</Text>
-            ) : null}
-            <Text style={styles.handCount}>
-              {language === 'ko' ? `손패 ${ai.hand.length}` : `${ai.hand.length} in hand`}
-            </Text>
-          </View>
-          <View style={styles.aiHandRow}>
-            {ai.hand.map((_, index) => (
-              <CardView key={`ai-${index}`} card={humanHand[0] ?? getCardById('jan-junk-1')} size="small" faceDown />
-            ))}
-          </View>
-        </View>
-        <CollectedPileView cardIds={ai.collected} />
+        {opponents.map((opponent, index) => {
+          const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
+          return (
+            <View key={opponent.id}>
+              <OpponentBar
+                player={opponent}
+                playerIndex={playerIndex}
+                isDealer={game.dealerIndex === playerIndex}
+                difficultyLabel={difficultyLabel}
+                dealerLabel={t('game.dealer')}
+                pointsLabel={`${t('game.points', { score: opponent.score })}${opponent.goCount > 0 ? ` · ${opponent.goCount}고` : ''}`}
+                handCountLabel={t('game.handCount', { count: opponent.hand.length })}
+              />
+              <CollectedPileView cardIds={opponent.collected} playerIndex={playerIndex} />
+            </View>
+          );
+        })}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>{language === 'ko' ? '바닥' : 'Table'}</Text>
+            <Text style={styles.sectionLabel}>{t('game.table')}</Text>
             <Text style={styles.sectionMeta}>
-              {language === 'ko' ? `${game.table.length}장` : `${game.table.length} cards`}
+              {t('game.cardCount', { count: game.table.length })}
             </Text>
           </View>
           {needsTableChoice ? (
-            <Text style={styles.prompt}>
-              {language === 'ko' ? '매칭할 바닥 패를 선택하세요' : 'Tap a matching table card'}
-            </Text>
+            <Text style={styles.prompt}>{t('game.chooseTable')}</Text>
           ) : null}
           <View style={styles.tableGrid}>
             {game.table.map((tableCard, index) => {
               const card = getCardById(tableCard.cardId);
               const stackSize = expandTableCard(tableCard).length;
               const choosable = canChooseTableIndex(game, index);
+              const hidden = hiddenCards?.has(tableCard.cardId);
 
               return (
-                <View key={`table-${index}-${tableCard.cardId}`} style={styles.tableItem}>
+                <LayoutAnchor
+                  key={`table-${index}-${tableCard.cardId}`}
+                  anchorKey={anchorKeys.table(index)}
+                  style={styles.tableItem}
+                >
                   <CardView
                     card={card}
                     size="table"
                     onPress={choosable ? () => chooseTable(index) : undefined}
                     selected={choosable}
+                    style={hidden ? styles.hidden : undefined}
                   />
                   {stackSize > 1 ? (
                     <Text style={styles.stackLabel}>
-                      {language === 'ko' ? `스택 ${stackSize}` : `Stack ${stackSize}`}
+                      {t('game.stack', { count: stackSize })}
                     </Text>
                   ) : null}
-                </View>
+                </LayoutAnchor>
               );
             })}
           </View>
         </View>
 
         <View style={styles.middleBar}>
-          <View style={styles.deckPile}>
-            <CardView
-              card={humanHand[0] ?? getCardById('jan-junk-1')}
-              size="small"
-              faceDown
-            />
+          <LayoutAnchor anchorKey={anchorKeys.deck} style={styles.deckPile}>
+            <CardView card={getCardById('jan-junk-1')} size="small" faceDown />
             <Text style={styles.deckCount}>
-              {language === 'ko' ? `덱 ${game.deck.length}` : `Deck ${game.deck.length}`}
+              {t('game.deck', { count: game.deck.length })}
             </Text>
-          </View>
-          {game.lastFlippedCardId ? (
+          </LayoutAnchor>
+          {game.lastFlippedCardId && !hiddenCards?.has(game.lastFlippedCardId) ? (
             <View style={styles.flippedPreview}>
-              <Text style={styles.flippedLabel}>{language === 'ko' ? '방금 뒤집음' : 'Flipped'}</Text>
+              <Text style={styles.flippedLabel}>{t('game.flipped')}</Text>
               <CardView card={getCardById(game.lastFlippedCardId)} size="small" />
             </View>
           ) : null}
           <Text style={styles.targetHint}>
-            {language === 'ko'
-              ? `목표 ${game.targetScore}점 · ${getLocalizedText(language, modeOption.labels)}`
-              : `Target ${game.targetScore} · ${getLocalizedText(language, modeOption.labels)}`}
+            {mode === 'hwatu'
+              ? getLocalizedText(language, modeOption.labels)
+              : t('game.target', {
+                  score: game.targetScore,
+                  mode: getLocalizedText(language, modeOption.labels),
+                })}
           </Text>
         </View>
 
-        <CollectedPileView cardIds={human.collected} />
+        <CollectedPileView cardIds={human.collected} playerIndex={humanIndex} />
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>{language === 'ko' ? '내 손패' : 'Your Hand'}</Text>
+            <Text style={styles.sectionLabel}>{t('game.yourHand')}</Text>
             <View style={styles.playerMeta}>
-              {isHumanDealer ? (
-                <Text style={styles.dealerBadge}>{language === 'ko' ? '선' : 'Dealer'}</Text>
+              {game.dealerIndex === humanIndex ? (
+                <Text style={styles.dealerBadge}>{t('game.dealer')}</Text>
               ) : null}
+              <Text style={styles.scoreBadge}>
+                {t('game.points', { score: human.score })}
+                {human.goCount > 0 ? ` · ${human.goCount}고` : ''}
+              </Text>
               <Text style={styles.sectionMeta}>
-                {language === 'ko' ? `${humanHand.length}장` : `${humanHand.length} cards`}
+                {t('game.cardCount', { count: human.hand.length })}
               </Text>
             </View>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.handRow}>
-            {humanHand.map((card) => {
-              const playable = playableSet.has(card.id);
-              return (
-                <CardView
-                  key={`hand-${card.id}`}
-                  card={card}
-                  size="hand"
-                  onPress={() => playCard(card.id)}
-                  disabled={!playable}
-                  selected={playable && isHumanTurn && !needsTableChoice}
-                />
-              );
-            })}
-          </ScrollView>
+          <HandFanView
+            cardIds={human.hand}
+            playerIndex={humanIndex}
+            playableCardIds={playableSet}
+            hiddenCardIds={hiddenCards}
+            onCardPress={playCard}
+            selected={isHumanTurn && !needsTableChoice}
+            disabled={!isHumanTurn || needsTableChoice || game.phase !== 'playing' || isAnimating}
+          />
         </View>
       </ScrollView>
+
+      <GoStopModal
+        visible={showGoStopModal}
+        score={human.score}
+        targetScore={game.targetScore}
+        goCount={human.goCount}
+        language={language}
+        onGo={callGo}
+        onStop={callStop}
+      />
+
+      <SepCupModal
+        visible={showSepCupModal}
+        language={language}
+        onAnimal={() => chooseSepCup('animal')}
+        onJunk={() => chooseSepCup('junk')}
+      />
+
+      <TurnAnimationOverlay activeFlight={activeFlight} onFlightComplete={onFlightComplete} />
     </SafeAreaView>
   );
 }
@@ -198,6 +314,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.felt,
+  },
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: colors.cream,
+    fontSize: 15,
   },
   topBar: {
     flexDirection: 'row',
@@ -249,6 +374,11 @@ const styles = StyleSheet.create({
     color: colors.cream,
     opacity: 0.65,
     fontSize: 12,
+  },
+  scoreBadge: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
   },
   aiHandRow: {
     flexDirection: 'row',
@@ -303,6 +433,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  hidden: {
+    opacity: 0,
+  },
   stackLabel: {
     color: colors.cream,
     opacity: 0.65,
@@ -342,9 +475,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     textAlign: 'right',
-  },
-  handRow: {
-    gap: 12,
-    paddingVertical: 4,
   },
 });

@@ -75,7 +75,14 @@ export const GAME_MODE_OPTIONS: GameModeOption[] = [
       en: 'You vs 2 AI · 7 hand · 6 table · 3 pts',
       ko: '1대2 · 손패 7 · 바닥 6 · 3점',
     },
-    comingSoon: true,
+  },
+  {
+    value: 'hwatu',
+    labels: { en: 'Hwatu Simple', ko: '화투 심플' },
+    description: {
+      en: 'No Go/Stop · per-card scoring',
+      ko: '고/스톱 없음 · 카드별 점수',
+    },
   },
 ];
 

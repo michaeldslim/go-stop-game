@@ -3,6 +3,7 @@ import { getCardById } from '../cards/getCardById';
 import { CARD_BORDER_RADIUS, CARD_DIMENSIONS } from '../constants/layout';
 import type { CardId } from '../types/gameState';
 import type { CardDefinition, CardType } from '../types/hwatu';
+import { LayoutAnchor, anchorKeys } from './LayoutAnchor';
 import { CardView } from './CardView';
 
 const SCORING_TYPES: CardType[] = ['bright', 'ribbon', 'animal'];
@@ -44,9 +45,10 @@ function groupByType(cardIds: CardId[]): Record<CardType, CardDefinition[]> {
 
 interface CollectedPileViewProps {
   cardIds: CardId[];
+  playerIndex?: number;
 }
 
-export function CollectedPileView({ cardIds }: CollectedPileViewProps) {
+export function CollectedPileView({ cardIds, playerIndex = 0 }: CollectedPileViewProps) {
   if (cardIds.length === 0) {
     return null;
   }
@@ -62,7 +64,7 @@ export function CollectedPileView({ cardIds }: CollectedPileViewProps) {
   };
 
   return (
-    <View style={styles.tray}>
+    <LayoutAnchor anchorKey={anchorKeys.pile(playerIndex)} style={styles.tray}>
       <View style={styles.split}>
         <View style={styles.leftColumn}>
           {visibleScoringTypes.map((type, rowIndex) => {
@@ -123,7 +125,7 @@ export function CollectedPileView({ cardIds }: CollectedPileViewProps) {
           </View>
         ) : null}
       </View>
-    </View>
+    </LayoutAnchor>
   );
 }
 

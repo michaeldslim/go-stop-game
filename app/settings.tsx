@@ -11,21 +11,22 @@ import {
   LANGUAGE_OPTIONS,
 } from '../src/constants/gameOptions';
 import { colors } from '../src/constants/colors';
+import { useTranslation } from '../src/i18n/useTranslation';
 import { useSettings } from '../src/settings/SettingsProvider';
 import type { AiDifficulty, AppLanguage, GameMode } from '../src/types/game';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { settings, updateSettings } = useSettings();
-  const { language } = settings;
+  const { t, language } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScreenHeader title="Settings" onBack={() => router.back()} />
+      <ScreenHeader title={t('settings.title')} onBack={() => router.back()} />
 
       <ScrollView contentContainerStyle={styles.content}>
         <OptionPicker<AppLanguage>
-          label={language === 'ko' ? '언어' : 'Language'}
+          label={t('settings.language')}
           value={settings.language}
           onChange={(value) => updateSettings({ language: value })}
           options={LANGUAGE_OPTIONS.map((option) => ({
@@ -35,7 +36,7 @@ export default function SettingsScreen() {
         />
 
         <OptionPicker<AiDifficulty>
-          label={language === 'ko' ? '기본 AI 난이도' : 'Default AI Difficulty'}
+          label={t('settings.defaultDifficulty')}
           value={settings.defaultAiDifficulty}
           onChange={(value) => updateSettings({ defaultAiDifficulty: value })}
           options={AI_DIFFICULTY_OPTIONS.map((option) => ({
@@ -46,7 +47,7 @@ export default function SettingsScreen() {
         />
 
         <OptionPicker<GameMode>
-          label={language === 'ko' ? '기본 게임 모드' : 'Default Game Mode'}
+          label={t('settings.defaultMode')}
           value={settings.defaultGameMode}
           onChange={(value) => updateSettings({ defaultGameMode: value })}
           options={GAME_MODE_OPTIONS.map((option) => ({
@@ -54,37 +55,27 @@ export default function SettingsScreen() {
             title: getLocalizedText(language, option.labels),
             subtitle: getLocalizedText(language, option.description),
             disabled: option.comingSoon,
-            badge: option.comingSoon
-              ? language === 'ko'
-                ? '준비 중'
-                : 'Coming soon'
-              : undefined,
+            badge: option.comingSoon ? t('setup.comingSoon') : undefined,
           }))}
         />
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>
-            {language === 'ko' ? '피드백' : 'Feedback'}
-          </Text>
+          <Text style={styles.sectionLabel}>{t('settings.feedback')}</Text>
           <SettingsToggleRow
-            label={language === 'ko' ? '효과음' : 'Sound Effects'}
-            description={language === 'ko' ? '카드 뒤집기, 매칭, 고/스톱' : 'Card flip, match, Go/Stop'}
+            label={t('settings.sound')}
+            description={t('settings.soundDesc')}
             value={settings.soundEnabled}
             onValueChange={(value) => updateSettings({ soundEnabled: value })}
           />
           <SettingsToggleRow
-            label={language === 'ko' ? '햅틱' : 'Haptics'}
-            description={language === 'ko' ? '매칭 및 고 선언 시 진동' : 'Vibration on match and Go'}
+            label={t('settings.haptics')}
+            description={t('settings.hapticsDesc')}
             value={settings.hapticsEnabled}
             onValueChange={(value) => updateSettings({ hapticsEnabled: value })}
           />
         </View>
 
-        <Text style={styles.credit}>
-          {language === 'ko'
-            ? '카드 아트: Wikimedia Commons (CC BY-SA 4.0)'
-            : 'Card art: Wikimedia Commons (CC BY-SA 4.0)'}
-        </Text>
+        <Text style={styles.credit}>{t('settings.credit')}</Text>
       </ScrollView>
     </SafeAreaView>
   );

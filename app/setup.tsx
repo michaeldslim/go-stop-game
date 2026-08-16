@@ -10,13 +10,14 @@ import {
   getLocalizedText,
 } from '../src/constants/gameOptions';
 import { colors } from '../src/constants/colors';
+import { useTranslation } from '../src/i18n/useTranslation';
 import { useSettings } from '../src/settings/SettingsProvider';
 import type { AiDifficulty, GameMode } from '../src/types/game';
 
 export default function SetupScreen() {
   const router = useRouter();
   const { settings, loaded } = useSettings();
-  const { language } = settings;
+  const { t, language } = useTranslation();
 
   const [mode, setMode] = useState<GameMode>(settings.defaultGameMode);
   const [aiDifficulty, setAiDifficulty] = useState<AiDifficulty>(settings.defaultAiDifficulty);
@@ -26,7 +27,7 @@ export default function SetupScreen() {
       return;
     }
 
-    setMode(settings.defaultGameMode === 'gostop' ? 'matgo' : settings.defaultGameMode);
+    setMode(settings.defaultGameMode);
     setAiDifficulty(settings.defaultAiDifficulty);
   }, [loaded, settings.defaultGameMode, settings.defaultAiDifficulty]);
 
@@ -53,19 +54,15 @@ export default function SetupScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title={language === 'ko' ? '게임 설정' : 'Game Setup'}
-        subtitle={
-          language === 'ko'
-            ? '모드와 AI 난이도를 선택하세요'
-            : 'Choose mode and AI difficulty'
-        }
+        title={t('setup.title')}
+        subtitle={t('setup.subtitle')}
         onBack={() => router.back()}
-        backLabel={language === 'ko' ? '← 홈' : '← Home'}
+        backLabel={t('common.home')}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
         <OptionPicker<GameMode>
-          label={language === 'ko' ? '게임 모드' : 'Game Mode'}
+          label={t('setup.gameMode')}
           value={mode}
           onChange={setMode}
           options={GAME_MODE_OPTIONS.map((option) => ({
@@ -73,16 +70,12 @@ export default function SetupScreen() {
             title: getLocalizedText(language, option.labels),
             subtitle: getLocalizedText(language, option.description),
             disabled: option.comingSoon,
-            badge: option.comingSoon
-              ? language === 'ko'
-                ? '준비 중'
-                : 'Coming soon'
-              : undefined,
+            badge: option.comingSoon ? t('setup.comingSoon') : undefined,
           }))}
         />
 
         <OptionPicker<AiDifficulty>
-          label={language === 'ko' ? 'AI 난이도' : 'AI Difficulty'}
+          label={t('setup.aiDifficulty')}
           value={aiDifficulty}
           onChange={setAiDifficulty}
           options={AI_DIFFICULTY_OPTIONS.map((option) => ({
@@ -93,15 +86,11 @@ export default function SetupScreen() {
         />
 
         <Pressable style={styles.startButton} onPress={startGame}>
-          <Text style={styles.startButtonText}>
-            {language === 'ko' ? '시작' : 'Start Game'}
-          </Text>
+          <Text style={styles.startButtonText}>{t('setup.start')}</Text>
         </Pressable>
 
         <Pressable style={styles.settingsLink} onPress={() => router.push('/settings')}>
-          <Text style={styles.settingsLinkText}>
-            {language === 'ko' ? '기본값 변경 (설정)' : 'Change defaults in Settings'}
-          </Text>
+          <Text style={styles.settingsLinkText}>{t('setup.changeDefaults')}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

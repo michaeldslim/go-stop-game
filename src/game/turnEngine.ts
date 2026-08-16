@@ -1,5 +1,6 @@
-import type { CardId, GameSoundEffect, MatgoGameState, PendingAction, PlayerState } from '../types/gameState';
-import { cloneGameState, getCurrentPlayer, opponentIndex } from './gameUtils';
+import type { CardId, GameSoundEffect, MatgoGameState, PendingAction, PlayerState, SepCupRole } from '../types/gameState';
+import { finishHandsEmpty, maybePromptGoStop } from './goStop';
+import { cloneGameState, getCurrentPlayer, nextPlayerIndex as getNextPlayerIndex } from './gameUtils';
 import {
   addTableCard,
   createStackedTableCard,
@@ -9,6 +10,13 @@ import {
   isSingleCardPile,
   removeTableCards,
 } from './tableCards';
+import {
+  applySpecialMoveReward,
+  detectCheapMatch,
+  getBombCardIds,
+} from './specialMoves';
+
+const SEP_CUP_ID = 'sep-animal-double';
 
 function removeFromHand(player: PlayerState, handCardId: CardId): PlayerState {
   const handIndex = player.hand.indexOf(handCardId);
@@ -19,6 +27,14 @@ function removeFromHand(player: PlayerState, handCardId: CardId): PlayerState {
   return {
     ...player,
     hand: player.hand.filter((cardId) => cardId !== handCardId),
+  };
+}
+
+function removeManyFromHand(player: PlayerState, handCardIds: CardId[]): PlayerState {
+  const removeSet = new Set(handCardIds);
+  return {
+    ...player,
+    hand: player.hand.filter((cardId) => !removeSet.has(cardId)),
   };
 }
 
@@ -41,26 +57,64 @@ function appendSound(state: MatgoGameState, effect: GameSoundEffect): MatgoGameS
   return { ...state, soundEffects: [...state.soundEffects, effect] };
 }
 
-function bothHandsEmpty(state: MatgoGameState): boolean {
-  return state.players[0].hand.length === 0 && state.players[1].hand.length === 0;
+function clearTurnFlags(state: MatgoGameState): MatgoGameState {
+  return { ...state, turnSpecialMoves: [], lastFlippedCardId: null };
 }
 
-function finishIfHandsEmpty(state: MatgoGameState): MatgoGameState {
-  if (!bothHandsEmpty(state)) {
+function needsSepCupPrompt(state: MatgoGameState, playerIndex: number, cardIds: CardId[]): boolean {
+  if (state.mode === 'hwatu') {
+    return false;
+  }
+  const player = state.players[playerIndex];
+  if (player.flexCardRoles[SEP_CUP_ID]) {
+    return false;
+  }
+  return cardIds.includes(SEP_CUP_ID) && !player.collected.includes(SEP_CUP_ID);
+}
+
+function maybePromptSepCup(
+  state: MatgoGameState,
+  playerIndex: number,
+  collectedIds: CardId[],
+): MatgoGameState {
+  if (!needsSepCupPrompt(state, playerIndex, collectedIds)) {
     return state;
   }
 
-  return {
-    ...state,
-    phase: 'finished',
-    pendingAction: null,
-    statusMessage: 'All cards played — hand complete (scoring in Phase 2)',
-  };
+  return withPending(state, {
+    type: 'chooseSepCupRole',
+    playerIndex,
+    cardId: SEP_CUP_ID,
+  });
+}
+
+function endTurn(state: MatgoGameState, playerIndex: number): MatgoGameState {
+  let next = state;
+
+  if (next.table.length === 0) {
+    next = applySpecialMoveReward(next, playerIndex, 'sweep');
+    next = setStatus(next, '싹쓸이 — table swept');
+  }
+
+  if (next.mode === 'hwatu') {
+    const afterHands = finishHandsEmpty(next);
+    if (afterHands.phase === 'finished') {
+      return afterHands;
+    }
+    return advanceTurn(clearTurnFlags(afterHands));
+  }
+
+  const afterGoStop = maybePromptGoStop(next, playerIndex);
+  if (afterGoStop.phase === 'goStopPrompt' || afterGoStop.phase === 'finished') {
+    return afterGoStop;
+  }
+
+  return advanceTurn(clearTurnFlags(afterGoStop));
 }
 
 function advanceTurn(state: MatgoGameState): MatgoGameState {
-  const nextPlayerIndex = opponentIndex(state.currentPlayerIndex);
-  const next = finishIfHandsEmpty({
+  const nextPlayerIndex = getNextPlayerIndex(state, state.currentPlayerIndex);
+  const next = finishHandsEmpty({
     ...state,
     currentPlayerIndex: nextPlayerIndex,
     pendingAction: null,
@@ -80,7 +134,7 @@ function advanceTurn(state: MatgoGameState): MatgoGameState {
 
 function collectFromTable(
   state: MatgoGameState,
-  playerIndex: 0 | 1,
+  playerIndex: number,
   tableIndex: number,
   extraCardIds: CardId[] = [],
 ): MatgoGameState {
@@ -90,10 +144,11 @@ function collectFromTable(
   }
 
   const collectedIds = [...extraCardIds, ...expandTableCard(tableCard)];
-  const players = [...state.players] as MatgoGameState['players'];
+  const isPukCollect = collectedIds.length >= 3;
+  const players = [...state.players];
   players[playerIndex] = collectCards(players[playerIndex], collectedIds);
 
-  return appendSound(
+  let next = appendSound(
     {
       ...state,
       players,
@@ -101,6 +156,41 @@ function collectFromTable(
     },
     'collect',
   );
+
+  if (isPukCollect) {
+    next = applySpecialMoveReward(next, playerIndex, 'puk');
+  }
+
+  return maybePromptSepCup(next, playerIndex, collectedIds);
+}
+
+function collectFromTableIndices(
+  state: MatgoGameState,
+  playerIndex: number,
+  tableIndices: number[],
+  extraCardIds: CardId[] = [],
+): MatgoGameState {
+  const collectedIds = [...extraCardIds];
+  for (const tableIndex of tableIndices) {
+    const tableCard = state.table[tableIndex];
+    if (tableCard) {
+      collectedIds.push(...expandTableCard(tableCard));
+    }
+  }
+
+  const players = [...state.players];
+  players[playerIndex] = collectCards(players[playerIndex], collectedIds);
+
+  let next = appendSound(
+    {
+      ...state,
+      players,
+      table: removeTableCards(state.table, tableIndices),
+    },
+    'collect',
+  );
+
+  return maybePromptSepCup(next, playerIndex, collectedIds);
 }
 
 function stackPuk(
@@ -117,6 +207,7 @@ function stackPuk(
   const remainingTable = removeTableCards(state.table, [indexA, indexB]);
   remainingTable.push(stackedCard);
 
+  const playerIndex = state.currentPlayerIndex;
   return setStatus(
     {
       ...state,
@@ -127,9 +218,15 @@ function stackPuk(
   );
 }
 
+interface HandPlayContext {
+  handPlayedToTable: boolean;
+  handMatched: boolean;
+  handMatchIndices: number[];
+}
+
 function resolveHandPlay(
   state: MatgoGameState,
-  playerIndex: 0 | 1,
+  playerIndex: number,
   handCardId: CardId,
   tableIndex?: number,
 ): MatgoGameState {
@@ -154,16 +251,23 @@ function resolveHandPlay(
   }
 
   let next = cloneGameState(state);
-  const players = [...next.players] as MatgoGameState['players'];
+  const players = [...next.players];
   players[playerIndex] = removeFromHand(players[playerIndex], handCardId);
-  next = appendSound({ ...next, players, pendingAction: null }, 'playCard');
+  next = appendSound({ ...next, players, pendingAction: null, turnSpecialMoves: [] }, 'playCard');
+
+  const context: HandPlayContext = {
+    handPlayedToTable: false,
+    handMatched: false,
+    handMatchIndices: matchIndices,
+  };
 
   if (matchIndices.length === 0) {
     next = setStatus(
       { ...next, table: addTableCard(next.table, handCardId) },
       'Played to table',
     );
-    return flipDeckCard(next, playerIndex);
+    context.handPlayedToTable = true;
+    return flipDeckCard(next, playerIndex, context);
   }
 
   const chosenIndex = tableIndex ?? matchIndices[0];
@@ -171,57 +275,110 @@ function resolveHandPlay(
     throw new Error('Selected table card is not a valid match');
   }
 
+  if (detectCheapMatch(next, chosenIndex, matchIndices)) {
+    next = applySpecialMoveReward(next, playerIndex, 'cheapMatch');
+  }
+
+  // Ttadak: two same-month singles on table, collect both with hand play
+  const sameMonthSingles = matchIndices.filter((index) => isSingleCardPile(next.table[index]));
+  if (sameMonthSingles.length >= 2) {
+    next = collectFromTableIndices(next, playerIndex, sameMonthSingles, [handCardId]);
+    next = applySpecialMoveReward(next, playerIndex, 'ttadak');
+    next = setStatus(next, '따닥 — all four cards collected');
+    context.handMatched = true;
+    return flipDeckCard(next, playerIndex, context);
+  }
+
   next = collectFromTable(next, playerIndex, chosenIndex, [handCardId]);
   next = setStatus(next, 'Matched from hand');
-  return flipDeckCard(next, playerIndex);
+  context.handMatched = true;
+  return flipDeckCard(next, playerIndex, context);
 }
 
-function flipDeckCard(state: MatgoGameState, playerIndex: 0 | 1): MatgoGameState {
+function flipDeckCard(
+  state: MatgoGameState,
+  playerIndex: number,
+  context: HandPlayContext,
+  flipCount = 1,
+): MatgoGameState {
   if (state.deck.length === 0) {
-    return advanceTurn(setStatus(state, 'Deck empty — turn ends'));
+    return endTurn(setStatus(state, 'Deck empty — turn ends'), playerIndex);
   }
 
   let next = cloneGameState(state);
-  const flippedCardId = next.deck[0];
-  next = appendSound(
-    {
-      ...next,
-      deck: next.deck.slice(1),
-      lastFlippedCardId: flippedCardId,
-    },
-    'flipCard',
-  );
 
-  const month = getCardMonth(flippedCardId);
-  const matchIndices = findTableMatchIndices(next.table, month);
+  for (let flip = 0; flip < flipCount; flip += 1) {
+    if (next.deck.length === 0) {
+      break;
+    }
+
+    const flippedCardId = next.deck[0];
+    next = appendSound(
+      {
+        ...next,
+        deck: next.deck.slice(1),
+        lastFlippedCardId: flippedCardId,
+      },
+      'flipCard',
+    );
+
+    const month = getCardMonth(flippedCardId);
+    const matchIndices = findTableMatchIndices(next.table, month);
 
   if (matchIndices.length === 0) {
     next = setStatus(
       { ...next, table: addTableCard(next.table, flippedCardId) },
-      'Flipped to table',
+      flipCount > 1 ? 'Bomb flip to table' : 'Flipped to table',
     );
-    return advanceTurn(next);
+
+    if (flip < flipCount - 1) {
+      continue;
+    }
+    return endTurn(next, playerIndex);
   }
 
   if (
     matchIndices.length === 2 &&
     matchIndices.every((index) => isSingleCardPile(next.table[index]))
   ) {
-    return advanceTurn(stackPuk(next, flippedCardId, [matchIndices[0], matchIndices[1]]));
+    next = stackPuk(next, flippedCardId, [matchIndices[0], matchIndices[1]]);
+    if (flip < flipCount - 1) {
+      continue;
+    }
+    return endTurn(next, playerIndex);
   }
 
   if (matchIndices.length === 1) {
     next = collectFromTable(next, playerIndex, matchIndices[0], [flippedCardId]);
-    next = setStatus(next, 'Matched from flip');
-    return advanceTurn(next);
+
+    if (context.handPlayedToTable && !context.handMatched) {
+      next = applySpecialMoveReward(next, playerIndex, 'chok');
+      next = setStatus(next, '쪽 — chok match');
+    } else {
+      next = setStatus(next, flipCount > 1 ? 'Bomb flip match' : 'Matched from flip');
+    }
+
+    if (flip < flipCount - 1) {
+      continue;
+    }
+    return endTurn(next, playerIndex);
   }
 
-  return withPending(next, {
-    type: 'chooseFlipMatch',
-    playerIndex,
-    flippedCardId,
-    matchIndices,
-  });
+    if (flip < flipCount - 1) {
+      // Rare: multiple flip matches during bomb — take first match
+      next = collectFromTable(next, playerIndex, matchIndices[0], [flippedCardId]);
+      continue;
+    }
+
+    return withPending(next, {
+      type: 'chooseFlipMatch',
+      playerIndex,
+      flippedCardId,
+      matchIndices,
+    });
+  }
+
+  return endTurn(next, playerIndex);
 }
 
 function resolveFlipChoice(state: MatgoGameState, tableIndex: number): MatgoGameState {
@@ -237,7 +394,7 @@ function resolveFlipChoice(state: MatgoGameState, tableIndex: number): MatgoGame
   let next = collectFromTable(state, pending.playerIndex, tableIndex, [pending.flippedCardId]);
   next = setStatus(next, 'Matched from flip');
   next = withPending(next, null);
-  return advanceTurn(next);
+  return endTurn(next, pending.playerIndex);
 }
 
 export function playHandCard(
@@ -266,6 +423,71 @@ export function playHandCard(
 
   const playerIndex = state.currentPlayerIndex;
   return resolveHandPlay(state, playerIndex, handCardId, tableIndex);
+}
+
+export function playBomb(state: MatgoGameState): MatgoGameState {
+  if (state.phase !== 'playing' || state.pendingAction) {
+    return state;
+  }
+
+  const playerIndex = state.currentPlayerIndex;
+  const bombCards = getBombCardIds(state, playerIndex);
+  if (bombCards.length < 3) {
+    return state;
+  }
+
+  let next = cloneGameState(state);
+  const players = [...next.players];
+  players[playerIndex] = {
+    ...removeManyFromHand(players[playerIndex], bombCards),
+    scoreMultiplier: 2,
+  };
+  next = {
+    ...next,
+    players,
+    turnSpecialMoves: ['폭탄'],
+    statusMessage: '폭탄 — three cards played',
+  };
+
+  // Play all three to table (they match the table card month)
+  const month = getCardMonth(bombCards[0]);
+  const tableMatches = findTableMatchIndices(next.table, month);
+  if (tableMatches.length > 0) {
+    next = collectFromTableIndices(next, playerIndex, tableMatches, bombCards);
+    next = applySpecialMoveReward(next, playerIndex, 'bomb');
+  } else {
+    for (const cardId of bombCards) {
+      next = { ...next, table: addTableCard(next.table, cardId) };
+    }
+  }
+
+  const context: HandPlayContext = {
+    handPlayedToTable: tableMatches.length === 0,
+    handMatched: tableMatches.length > 0,
+    handMatchIndices: tableMatches,
+  };
+
+  return flipDeckCard(next, playerIndex, context, 2);
+}
+
+export function chooseSepCupRole(
+  state: MatgoGameState,
+  role: SepCupRole,
+): MatgoGameState {
+  const pending = state.pendingAction;
+  if (!pending || pending.type !== 'chooseSepCupRole') {
+    return state;
+  }
+
+  const players = [...state.players];
+  const player = players[pending.playerIndex];
+  players[pending.playerIndex] = {
+    ...player,
+    sepCupRole: role,
+    flexCardRoles: { ...player.flexCardRoles, [pending.cardId]: role },
+  };
+
+  return withPending({ ...state, players }, null);
 }
 
 export function chooseTableForPending(state: MatgoGameState, tableIndex: number): MatgoGameState {
@@ -301,7 +523,11 @@ export function canChooseTableIndex(state: MatgoGameState, tableIndex: number): 
     return false;
   }
 
-  return state.pendingAction.matchIndices.includes(tableIndex);
+  if (state.pendingAction.type === 'chooseHandMatch' || state.pendingAction.type === 'chooseFlipMatch') {
+    return state.pendingAction.matchIndices.includes(tableIndex);
+  }
+
+  return false;
 }
 
 export function getPlayableHandCardIds(state: MatgoGameState): CardId[] {
@@ -337,6 +563,10 @@ export function needsHumanTableChoice(state: MatgoGameState): boolean {
     state.pendingAction.type === 'chooseHandMatch' ||
     state.pendingAction.type === 'chooseFlipMatch'
   );
+}
+
+export function needsHumanSepCupChoice(state: MatgoGameState): boolean {
+  return state.pendingAction?.type === 'chooseSepCupRole' && state.players[state.pendingAction.playerIndex].isHuman;
 }
 
 // Re-export for tests

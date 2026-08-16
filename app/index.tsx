@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../src/constants/colors';
 import { CARD_BORDER_RADIUS } from '../src/constants/layout';
+import { useTranslation } from '../src/i18n/useTranslation';
 
 /** August bright (8월 광) — copied from assets/cards/3x/aug-bright.png */
 const HOME_LOGO_WIDTH = 136;
@@ -11,6 +12,7 @@ const HOME_LOGO_HEIGHT = 222;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -21,20 +23,20 @@ export default function HomeScreen() {
           contentFit="contain"
           accessibilityLabel="August bright hwatu card"
         />
-        <Text style={styles.title}>Hwatu</Text>
-        <Text style={styles.subtitle}>Korean Go-Stop Card Game</Text>
-        <Text style={styles.korean}>화투 · 고스톱</Text>
+        <Text style={styles.title}>{t('home.title')}</Text>
+        <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
+        <Text style={styles.korean}>{t('home.korean')}</Text>
       </View>
 
       <View style={styles.actions}>
         <Pressable style={styles.primaryButton} onPress={() => router.push('/setup')}>
-          <Text style={styles.primaryButtonText}>Play</Text>
+          <Text style={styles.primaryButtonText}>{t('home.play')}</Text>
         </Pressable>
         <Pressable style={styles.secondaryButton} onPress={() => router.push('/rules')}>
-          <Text style={styles.secondaryButtonText}>How to Play</Text>
+          <Text style={styles.secondaryButtonText}>{t('home.howToPlay')}</Text>
         </Pressable>
         <Pressable style={styles.tertiaryButton} onPress={() => router.push('/settings')}>
-          <Text style={styles.tertiaryButtonText}>Settings</Text>
+          <Text style={styles.tertiaryButtonText}>{t('home.settings')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
