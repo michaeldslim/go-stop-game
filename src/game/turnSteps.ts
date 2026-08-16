@@ -83,7 +83,12 @@ function flipCollectIds(flippedCard: CardId, collected: CardId[]): CardId[] {
  * Returns empty when waiting for human table choice mid-turn.
  */
 export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): TurnStep[] {
-  if (after.pendingAction?.type === 'chooseHandMatch' && !before.pendingAction) {
+  if (
+    after.pendingAction &&
+    !before.pendingAction &&
+    (after.pendingAction.type === 'chooseHandMatch' ||
+      after.pendingAction.type === 'chooseFlipMatch')
+  ) {
     return [];
   }
 

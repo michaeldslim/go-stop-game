@@ -36,7 +36,7 @@ export default function SettingsScreen() {
         />
 
         <OptionPicker<AiDifficulty>
-          label={t('settings.defaultDifficulty')}
+          label={t('setup.aiDifficulty')}
           value={settings.defaultAiDifficulty}
           onChange={(value) => updateSettings({ defaultAiDifficulty: value })}
           options={AI_DIFFICULTY_OPTIONS.map((option) => ({
@@ -47,7 +47,7 @@ export default function SettingsScreen() {
         />
 
         <OptionPicker<GameMode>
-          label={t('settings.defaultMode')}
+          label={t('setup.gameMode')}
           value={settings.defaultGameMode}
           onChange={(value) => updateSettings({ defaultGameMode: value })}
           options={GAME_MODE_OPTIONS.map((option) => ({

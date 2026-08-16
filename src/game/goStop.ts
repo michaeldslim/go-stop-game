@@ -1,7 +1,7 @@
 import type { AiDifficulty } from '../types/game';
 import type { MatgoGameState, PlayerIndex } from '../types/gameState';
+import { allHandsEmpty, cloneGameState } from './gameUtils';
 import { syncPlayerScore } from './scoring';
-import { cloneGameState } from './gameUtils';
 
 export function refreshPlayerScores(state: MatgoGameState): MatgoGameState {
   const players = state.players.map((player) => ({
@@ -171,6 +171,11 @@ function findWinningPlayerIndex(state: MatgoGameState): PlayerIndex | null {
 
 export function finishHandsEmpty(state: MatgoGameState): MatgoGameState {
   const next = refreshPlayerScores(cloneGameState(state));
+
+  if (!allHandsEmpty(next)) {
+    return next;
+  }
+
   const winnerIndex = findWinningPlayerIndex(next);
 
   if (winnerIndex !== null) {

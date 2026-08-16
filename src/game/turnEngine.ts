@@ -224,6 +224,22 @@ interface HandPlayContext {
   handMatchIndices: number[];
 }
 
+function shouldPromptHandMatch(table: MatgoGameState['table'], matchIndices: number[]): boolean {
+  if (matchIndices.length <= 1) {
+    return false;
+  }
+
+  // 따닥 — two singles on table; all four cards are collected automatically.
+  if (
+    matchIndices.length === 2 &&
+    matchIndices.every((index) => isSingleCardPile(table[index]))
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function resolveHandPlay(
   state: MatgoGameState,
   playerIndex: number,
@@ -238,16 +254,19 @@ function resolveHandPlay(
   const month = getCardMonth(handCardId);
   const matchIndices = findTableMatchIndices(state.table, month);
 
-  if (matchIndices.length > 1 && tableIndex === undefined) {
-    return {
-      ...withPending(state, {
-        type: 'chooseHandMatch',
-        playerIndex,
-        handCardId,
-        matchIndices,
-      }),
-      soundEffects: [],
-    };
+  if (shouldPromptHandMatch(state.table, matchIndices) && tableIndex === undefined) {
+    return setStatus(
+      {
+        ...withPending(state, {
+          type: 'chooseHandMatch',
+          playerIndex,
+          handCardId,
+          matchIndices,
+        }),
+        soundEffects: [],
+      },
+      'Choose a matching table card',
+    );
   }
 
   let next = cloneGameState(state);
@@ -370,12 +389,15 @@ function flipDeckCard(
       continue;
     }
 
-    return withPending(next, {
-      type: 'chooseFlipMatch',
-      playerIndex,
-      flippedCardId,
-      matchIndices,
-    });
+    return setStatus(
+      withPending(next, {
+        type: 'chooseFlipMatch',
+        playerIndex,
+        flippedCardId,
+        matchIndices,
+      }),
+      'Choose a matching table card for the flip',
+    );
   }
 
   return endTurn(next, playerIndex);
@@ -555,7 +577,12 @@ export function isAiTurn(state: MatgoGameState): boolean {
 }
 
 export function needsHumanTableChoice(state: MatgoGameState): boolean {
-  if (!state.pendingAction || !getCurrentPlayer(state).isHuman) {
+  if (!state.pendingAction) {
+    return false;
+  }
+
+  const player = state.players[state.pendingAction.playerIndex];
+  if (!player?.isHuman) {
     return false;
   }
 
@@ -563,6 +590,34 @@ export function needsHumanTableChoice(state: MatgoGameState): boolean {
     state.pendingAction.type === 'chooseHandMatch' ||
     state.pendingAction.type === 'chooseFlipMatch'
   );
+}
+
+export function getPendingTableChoice(state: MatgoGameState): {
+  matchIndices: number[];
+  handCardId: CardId | null;
+  flippedCardId: CardId | null;
+} | null {
+  if (!state.pendingAction) {
+    return null;
+  }
+
+  if (state.pendingAction.type === 'chooseHandMatch') {
+    return {
+      matchIndices: state.pendingAction.matchIndices,
+      handCardId: state.pendingAction.handCardId,
+      flippedCardId: null,
+    };
+  }
+
+  if (state.pendingAction.type === 'chooseFlipMatch') {
+    return {
+      matchIndices: state.pendingAction.matchIndices,
+      handCardId: null,
+      flippedCardId: state.pendingAction.flippedCardId,
+    };
+  }
+
+  return null;
 }
 
 export function needsHumanSepCupChoice(state: MatgoGameState): boolean {

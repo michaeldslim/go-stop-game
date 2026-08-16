@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Converts assets/cards/source/*.webp (Wikimedia Hanafuda names)
+ * Converts assets/resource/*.webp (Wikimedia Hwatu names)
  * into assets/cards/master/*.png at 512×839, then runs size generation.
  */
 import { mkdir } from 'node:fs/promises';
@@ -11,7 +11,7 @@ import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const SOURCE = join(ROOT, 'assets/cards/source');
+const SOURCE = join(ROOT, 'assets/resource');
 const MASTER = join(ROOT, 'assets/cards/master');
 const BACK = join(ROOT, 'assets/cards/back');
 
@@ -20,66 +20,68 @@ const HEIGHT = 839;
 
 /** [source filename, card id] — one source can map to multiple cards */
 const SOURCE_ENTRIES = [
-  ['500px-Hanafuda_January_Hikari.svg.webp', 'jan-bright'],
-  ['500px-Hanafuda_January_Tanzaku.svg.webp', 'jan-ribbon'],
-  ['500px-Hanafuda_January_Kasu_1.svg.webp', 'jan-junk-1'],
-  ['500px-Hanafuda_January_Kasu_2.svg.webp', 'jan-junk-2'],
+  ['500px-Hwatu_January_Hikari.svg.webp', 'jan-bright'],
+  ['500px-Hwatu_January_Tanzaku.svg.webp', 'jan-ribbon'],
+  ['500px-Hwatu_January_Kasu_1.svg.webp', 'jan-junk-1'],
+  ['500px-Hwatu_January_Kasu_2.svg.webp', 'jan-junk-2'],
 
-  ['500px-Hanafuda_February_Tane.svg.webp', 'feb-animal'],
-  ['500px-Hanafuda_February_Tanzaku.svg.webp', 'feb-ribbon'],
-  ['500px-Hanafuda_February_Kasu_1.svg.webp', 'feb-junk-1'],
-  ['500px-Hanafuda_February_Kasu_2.svg.webp', 'feb-junk-2'],
+  ['500px-Hwatu_February_Tane.svg.webp', 'feb-animal'],
+  ['500px-Hwatu_February_Tanzaku.svg.webp', 'feb-ribbon'],
+  ['500px-Hwatu_February_Kasu_1.svg.webp', 'feb-junk-1'],
+  ['500px-Hwatu_February_Kasu_2.svg.webp', 'feb-junk-2'],
 
-  ['500px-Hanafuda_March_Hikari.svg.webp', 'mar-bright'],
-  ['500px-Hanafuda_March_Tanzaku.svg.webp', 'mar-ribbon'],
-  ['500px-Hanafuda_March_Kasu_1.svg.webp', 'mar-junk-1'],
-  ['500px-Hanafuda_March_Kasu_2.svg.webp', 'mar-junk-2'],
+  ['500px-Hwatu_March_Hikari.svg.webp', 'mar-bright'],
+  ['500px-Hwatu_March_Tanzaku.svg.webp', 'mar-ribbon'],
+  ['500px-Hwatu_March_Kasu_1.svg.webp', 'mar-junk-1'],
+  ['500px-Hwatu_March_Kasu_2.svg.webp', 'mar-junk-2'],
 
-  ['500px-Hanafuda_April_Tane.svg.webp', 'apr-animal'],
-  ['500px-Hanafuda_April_Tanzaku.svg.webp', 'apr-ribbon'],
-  ['500px-Hanafuda_April_Kasu_1.svg.webp', 'apr-junk-1'],
-  ['500px-Hanafuda_April_Kasu_2.svg.webp', 'apr-junk-2'],
+  ['500px-Hwatu_April_Tane.svg.webp', 'apr-animal'],
+  ['500px-Hwatu_April_Tanzaku.svg.webp', 'apr-ribbon'],
+  ['500px-Hwatu_April_Kasu_1.svg.webp', 'apr-junk-1'],
+  ['500px-Hwatu_April_Kasu_2.svg.webp', 'apr-junk-2'],
 
-  ['500px-Hanafuda_May_Tane.svg.webp', 'may-animal'],
-  ['500px-Hanafuda_May_Tanzaku.svg.webp', 'may-ribbon'],
-  ['500px-Hanafuda_May_Kasu_1.svg.webp', 'may-junk-1'],
-  ['500px-Hanafuda_May_Kasu_2.svg.webp', 'may-junk-2'],
+  ['500px-Hwatu_May_Tane.svg.webp', 'may-animal'],
+  ['500px-Hwatu_May_Tanzaku.svg.webp', 'may-ribbon'],
+  ['500px-Hwatu_May_Kasu_1.svg.webp', 'may-junk-1'],
+  ['500px-Hwatu_May_Kasu_2.svg.webp', 'may-junk-2'],
 
-  ['500px-Hanafuda_June_Tane.svg.webp', 'jun-animal'],
-  ['500px-Hanafuda_June_Tanzaku.svg.webp', 'jun-ribbon'],
-  ['500px-Hanafuda_June_Kasu_1.svg.webp', 'jun-junk-1'],
-  ['500px-Hanafuda_June_Kasu_2.svg.webp', 'jun-junk-2'],
+  ['500px-Hwatu_June_Tane.svg.webp', 'jun-animal'],
+  ['500px-Hwatu_June_Tanzaku.svg.webp', 'jun-ribbon'],
+  ['500px-Hwatu_June_Kasu_1.svg.webp', 'jun-junk-1'],
+  ['500px-Hwatu_June_Kasu_2.svg.webp', 'jun-junk-2'],
 
-  ['500px-Hanafuda_July_Tane.svg.webp', 'jul-animal'],
-  ['500px-Hanafuda_July_Tanzaku.svg.webp', 'jul-ribbon'],
-  ['500px-Hanafuda_July_Kasu_1.svg.webp', 'jul-junk-1'],
-  ['500px-Hanafuda_July_Kasu_2.svg.webp', 'jul-junk-2'],
+  ['500px-Hwatu_July_Tane.svg.webp', 'jul-animal'],
+  ['500px-Hwatu_July_Tanzaku.svg.webp', 'jul-ribbon'],
+  ['500px-Hwatu_July_Kasu_1.svg.webp', 'jul-junk-1'],
+  ['500px-Hwatu_July_Kasu_2.svg.webp', 'jul-junk-2'],
 
-  ['500px-Hanafuda_August_Tane.svg.webp', 'aug-animal'],
-  ['500px-Hanafuda_August_Hikari.svg.webp', 'aug-bright'],
-  // No August Tanzaku in Wikimedia — reuse July plain red ribbon (same 초단 type)
-  ['500px-Hanafuda_July_Tanzaku.svg.webp', 'aug-ribbon'],
-  ['500px-Hanafuda_August_Kasu_1.svg.webp', 'aug-junk-1'],
+  ['500px-Hwatu_August_Tane.svg.webp', 'aug-animal'],
+  ['500px-Hwatu_August_Hikari.svg.webp', 'aug-bright'],
+  // No August Tanzaku in Wikimedia Hwatu set — reuse July plain ribbon (same 초단 type)
+  ['500px-Hwatu_July_Tanzaku.svg.webp', 'aug-ribbon'],
+  ['500px-Hwatu_August_Kasu_1.svg.webp', 'aug-junk-1'],
 
-  ['500px-Hanafuda_September_Tane.svg.webp', 'sep-animal-double'],
-  ['500px-Hanafuda_September_Tanzaku.svg.webp', 'sep-ribbon'],
-  ['500px-Hanafuda_September_Kasu_1.svg.webp', 'sep-junk-1'],
-  ['500px-Hanafuda_September_Kasu_2.svg.webp', 'sep-junk-2'],
+  ['500px-Hwatu_September_Tane.svg.webp', 'sep-junk-double'],
+  ['500px-Hwatu_September_Tanzaku.svg.webp', 'sep-ribbon'],
+  ['500px-Hwatu_September_Kasu_1.svg.webp', 'sep-junk-1'],
+  ['500px-Hwatu_September_Kasu_2.svg.webp', 'sep-junk-2'],
 
-  ['500px-Hanafuda_October_Tane.svg.webp', 'oct-animal'],
-  ['500px-Hanafuda_October_Kasu_1.svg.webp', 'oct-junk-1'],
-  ['500px-Hanafuda_October_Kasu_2.svg.webp', 'oct-junk-2'],
-  ['500px-Hanafuda_October_Tanzaku.svg.webp', 'oct-junk-3'],
+  ['500px-Hwatu_October_Tane.svg.webp', 'oct-animal'],
+  ['500px-Hwatu_October_Kasu_1.svg.webp', 'oct-junk-1'],
+  ['500px-Hwatu_October_Kasu_2.svg.webp', 'oct-junk-2'],
+  // No October ribbon in Hwatu — Tanzaku used as 3rd junk
+  ['500px-Hwatu_October_Tanzaku.svg.webp', 'oct-ribbon'],
 
-  ['500px-Hanafuda_November_Tane.svg.webp', 'nov-animal'],
-  ['500px-Hanafuda_November_Tanzaku.svg.webp', 'nov-junk-1'],
-  ['500px-Hanafuda_November_Hikari.svg.webp', 'nov-junk-2'],
-  ['500px-Hanafuda_November_Kasu.svg.webp', 'nov-junk-double'],
+  // November Hikari is the Hwatu animal (phoenix/raven); three Kasu are 피 + 쌍피
+  ['500px-Hwatu_November_Hikari.svg.webp', 'nov-animal'],
+  ['500px-Hwatu_November_Kasu_1.svg.webp', 'nov-junk-1'],
+  ['500px-Hwatu_November_Kasu_2.svg.webp', 'nov-junk-2'],
+  ['500px-Hwatu_November_Kasu_3.svg.webp', 'nov-junk-double'],
 
-  ['500px-Hanafuda_December_Hikari.svg.webp', 'dec-rain'],
-  ['500px-Hanafuda_December_Kasu_1.svg.webp', 'dec-junk-1'],
-  ['500px-Hanafuda_December_Kasu_2.svg.webp', 'dec-junk-2'],
-  ['500px-Hanafuda_December_Kasu_3.svg.webp', 'dec-junk-double'],
+  ['500px-Hwatu_December_Hikari.svg.webp', 'dec-rain'],
+  ['500px-Hwatu_December_Kasu.svg.webp', 'dec-animal'],
+  ['500px-Hwatu_December_Tane.svg.webp', 'dec-ribbon'],
+  ['500px-Hwatu_December_Tanzaku.svg.webp', 'dec-junk-double'],
 ];
 
 const BACK_SOURCE = '500px-Hanafuda_card_back.svg.webp';
@@ -93,10 +95,10 @@ const EXPECTED_IDS = [
   'jun-animal', 'jun-ribbon', 'jun-junk-1', 'jun-junk-2',
   'jul-animal', 'jul-ribbon', 'jul-junk-1', 'jul-junk-2',
   'aug-animal', 'aug-bright', 'aug-ribbon', 'aug-junk-1',
-  'sep-animal-double', 'sep-ribbon', 'sep-junk-1', 'sep-junk-2',
-  'oct-animal', 'oct-junk-1', 'oct-junk-2', 'oct-junk-3',
+  'sep-junk-double', 'sep-ribbon', 'sep-junk-1', 'sep-junk-2',
+  'oct-animal', 'oct-junk-1', 'oct-junk-2', 'oct-ribbon',
   'nov-animal', 'nov-junk-1', 'nov-junk-2', 'nov-junk-double',
-  'dec-rain', 'dec-junk-1', 'dec-junk-2', 'dec-junk-double',
+  'dec-rain', 'dec-animal', 'dec-ribbon', 'dec-junk-double',
 ];
 
 async function convertWebpToPng(srcPath, destPath) {

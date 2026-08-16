@@ -12,12 +12,10 @@ import { SpecialMoveBar } from '../src/components/SpecialMoveBar';
 import { TurnAnimationOverlay } from '../src/components/TurnAnimationOverlay';
 import {
   getAiDifficultyOption,
-  getGameModeOption,
   getLocalizedText,
 } from '../src/constants/gameOptions';
 import { colors } from '../src/constants/colors';
 import { expandTableCard } from '../src/game/tableCards';
-import { canChooseTableIndex } from '../src/game/turnEngine';
 import { useMatgoGame } from '../src/game/useMatgoGame';
 import { useTranslation } from '../src/i18n/useTranslation';
 import type { AiDifficulty, GameMode } from '../src/types/game';
@@ -82,11 +80,14 @@ function OpponentBar({
         <Text style={styles.scoreBadge}>{pointsLabel}</Text>
         <Text style={styles.handCount}>{handCountLabel}</Text>
       </View>
-      <LayoutAnchor anchorKey={anchorKeys.aiHand(playerIndex)} style={styles.aiHandRow}>
-        {player.hand.map((_, index) => (
-          <CardView key={`ai-${playerIndex}-${index}`} card={getCardById('jan-junk-1')} size="small" faceDown />
-        ))}
-      </LayoutAnchor>
+      <HandFanView
+        cardIds={player.hand}
+        playerIndex={playerIndex}
+        faceDown
+        fanDirection="down"
+        size="small"
+        style={styles.aiHandFan}
+      />
     </View>
   );
 }
@@ -103,7 +104,6 @@ function GameScreenContent() {
   const mode = parseMode(params.mode);
   const difficulty = parseDifficulty(params.difficulty);
   const handMultiplier = parseHandMultiplier(params.handMultiplier);
-  const modeOption = getGameModeOption(mode);
   const difficultyOption = getAiDifficultyOption(difficulty);
 
   const {
@@ -118,6 +118,9 @@ function GameScreenContent() {
     playableHandCardIds,
     isHumanTurn,
     needsTableChoice,
+    pendingTableChoice,
+    highlightedHandCards,
+    choosableTableIndices,
     showGoStopModal,
     showSepCupModal,
     canShake,
@@ -160,12 +163,6 @@ function GameScreenContent() {
         </Text>
       </View>
 
-      {game.statusMessage ? (
-        <Text style={styles.status} numberOfLines={2}>
-          {game.statusMessage}
-        </Text>
-      ) : null}
-
       <SpecialMoveBar
         language={language}
         canShake={canShake}
@@ -175,12 +172,13 @@ function GameScreenContent() {
         disabled={!isHumanTurn || isAnimating}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {opponents.map((opponent, index) => {
-          const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
-          return (
-            <View key={opponent.id}>
+      <View style={styles.playArea}>
+        <View style={styles.topHandDock}>
+          {opponents.map((opponent) => {
+            const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
+            return (
               <OpponentBar
+                key={opponent.id}
                 player={opponent}
                 playerIndex={playerIndex}
                 isDealer={game.dealerIndex === playerIndex}
@@ -189,78 +187,91 @@ function GameScreenContent() {
                 pointsLabel={`${t('game.points', { score: opponent.score })}${opponent.goCount > 0 ? ` · ${opponent.goCount}고` : ''}`}
                 handCountLabel={t('game.handCount', { count: opponent.hand.length })}
               />
-              <CollectedPileView cardIds={opponent.collected} playerIndex={playerIndex} />
+            );
+          })}
+        </View>
+
+        <ScrollView
+          style={styles.middleScroll}
+          contentContainerStyle={styles.middleContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {opponents.map((opponent) => {
+            const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
+            return (
+              <CollectedPileView
+                key={`pile-${opponent.id}`}
+                cardIds={opponent.collected}
+                playerIndex={playerIndex}
+              />
+            );
+          })}
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>{t('game.table')}</Text>
+              <Text style={styles.sectionMeta}>
+                {t('game.cardCount', { count: game.table.length })}
+              </Text>
             </View>
-          );
-        })}
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>{t('game.table')}</Text>
-            <Text style={styles.sectionMeta}>
-              {t('game.cardCount', { count: game.table.length })}
-            </Text>
-          </View>
-          {needsTableChoice ? (
-            <Text style={styles.prompt}>{t('game.chooseTable')}</Text>
-          ) : null}
-          <View style={styles.tableGrid}>
-            {game.table.map((tableCard, index) => {
-              const card = getCardById(tableCard.cardId);
-              const stackSize = expandTableCard(tableCard).length;
-              const choosable = canChooseTableIndex(game, index);
-              const hidden = hiddenCards?.has(tableCard.cardId);
-
-              return (
-                <LayoutAnchor
-                  key={`table-${index}-${tableCard.cardId}`}
-                  anchorKey={anchorKeys.table(index)}
-                  style={styles.tableItem}
-                >
-                  <CardView
-                    card={card}
-                    size="table"
-                    onPress={choosable ? () => chooseTable(index) : undefined}
-                    selected={choosable}
-                    style={hidden ? styles.hidden : undefined}
-                  />
-                  {stackSize > 1 ? (
-                    <Text style={styles.stackLabel}>
-                      {t('game.stack', { count: stackSize })}
-                    </Text>
-                  ) : null}
+            {needsTableChoice ? (
+              <Text style={styles.prompt}>
+                {pendingTableChoice?.flippedCardId
+                  ? t('game.chooseFlipMatch')
+                  : t('game.chooseTable')}
+              </Text>
+            ) : null}
+            <View style={styles.tableField}>
+              <View style={styles.tableRow}>
+                <LayoutAnchor anchorKey={anchorKeys.deck} style={styles.deckSlot}>
+                  <CardView card={getCardById('jan-junk-1')} size="pile" faceDown />
+                  <Text style={styles.deckCount}>
+                    {t('game.deck', { count: game.deck.length })}
+                  </Text>
                 </LayoutAnchor>
-              );
-            })}
-          </View>
-        </View>
+                <View style={styles.tableGrid}>
+              {game.table.map((tableCard, index) => {
+                const card = getCardById(tableCard.cardId);
+                const stackSize = expandTableCard(tableCard).length;
+                const choosable = choosableTableIndices.has(index);
+                const hidden = hiddenCards?.has(tableCard.cardId);
 
-        <View style={styles.middleBar}>
-          <LayoutAnchor anchorKey={anchorKeys.deck} style={styles.deckPile}>
-            <CardView card={getCardById('jan-junk-1')} size="small" faceDown />
-            <Text style={styles.deckCount}>
-              {t('game.deck', { count: game.deck.length })}
-            </Text>
-          </LayoutAnchor>
-          {game.lastFlippedCardId && !hiddenCards?.has(game.lastFlippedCardId) ? (
-            <View style={styles.flippedPreview}>
-              <Text style={styles.flippedLabel}>{t('game.flipped')}</Text>
-              <CardView card={getCardById(game.lastFlippedCardId)} size="small" />
+                return (
+                  <LayoutAnchor
+                    key={`table-${index}-${tableCard.cardId}`}
+                    anchorKey={anchorKeys.table(index)}
+                    style={[styles.tableItem, choosable && styles.tableItemChoosable]}
+                  >
+                    <CardView
+                      card={card}
+                      size="table"
+                      onPress={choosable ? () => chooseTable(index) : undefined}
+                      choosable={choosable}
+                      style={hidden ? styles.hidden : undefined}
+                    />
+                    {stackSize > 1 ? (
+                      <Text style={styles.stackLabel}>
+                        {t('game.stack', { count: stackSize })}
+                      </Text>
+                    ) : null}
+                  </LayoutAnchor>
+                );
+              })}
+                </View>
+                {game.lastFlippedCardId && !hiddenCards?.has(game.lastFlippedCardId) ? (
+                  <View style={styles.flippedSlot}>
+                    <Text style={styles.flippedLabel}>{t('game.flipped')}</Text>
+                    <CardView card={getCardById(game.lastFlippedCardId)} size="pile" />
+                  </View>
+                ) : null}
+              </View>
             </View>
-          ) : null}
-          <Text style={styles.targetHint}>
-            {mode === 'hwatu'
-              ? getLocalizedText(language, modeOption.labels)
-              : t('game.target', {
-                  score: game.targetScore,
-                  mode: getLocalizedText(language, modeOption.labels),
-                })}
-          </Text>
-        </View>
+          </View>
 
-        <CollectedPileView cardIds={human.collected} playerIndex={humanIndex} />
+          <CollectedPileView cardIds={human.collected} playerIndex={humanIndex} />
+        </ScrollView>
 
-        <View style={styles.section}>
+        <View style={styles.bottomHandDock}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>{t('game.yourHand')}</Text>
             <View style={styles.playerMeta}>
@@ -281,12 +292,14 @@ function GameScreenContent() {
             playerIndex={humanIndex}
             playableCardIds={playableSet}
             hiddenCardIds={hiddenCards}
+            highlightedCardIds={highlightedHandCards}
             onCardPress={playCard}
             selected={isHumanTurn && !needsTableChoice}
             disabled={!isHumanTurn || needsTableChoice || game.phase !== 'playing' || isAnimating}
+            style={styles.playerHandFan}
           />
         </View>
-      </ScrollView>
+      </View>
 
       <GoStopModal
         visible={showGoStopModal}
@@ -344,20 +357,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'right',
   },
-  status: {
-    color: colors.cream,
-    opacity: 0.8,
-    fontSize: 13,
-    paddingHorizontal: 16,
-    paddingBottom: 4,
+  playArea: {
+    flex: 1,
   },
-  scrollContent: {
-    paddingBottom: 24,
+  topHandDock: {
+    paddingTop: 4,
+    paddingBottom: 8,
+    gap: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(245, 230, 200, 0.15)',
+  },
+  middleScroll: {
+    flex: 1,
+  },
+  middleContent: {
+    paddingVertical: 12,
     gap: 14,
+  },
+  bottomHandDock: {
+    paddingTop: 10,
+    paddingBottom: 8,
+    paddingHorizontal: 16,
+    gap: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(245, 230, 200, 0.15)',
   },
   opponentBar: {
     paddingHorizontal: 16,
-    gap: 6,
+    gap: 4,
   },
   opponentInfo: {
     flexDirection: 'row',
@@ -380,10 +407,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  aiHandRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+  aiHandFan: {
+    alignSelf: 'center',
+  },
+  playerHandFan: {
+    alignSelf: 'center',
   },
   section: {
     gap: 8,
@@ -423,7 +451,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  tableField: {
+    gap: 8,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  deckSlot: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  flippedSlot: {
+    alignItems: 'center',
+    gap: 2,
+  },
   tableGrid: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
@@ -432,6 +477,9 @@ const styles = StyleSheet.create({
   tableItem: {
     alignItems: 'center',
     gap: 4,
+  },
+  tableItemChoosable: {
+    zIndex: 2,
   },
   hidden: {
     opacity: 0,
@@ -442,38 +490,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  middleBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  deckPile: {
-    alignItems: 'center',
-    gap: 4,
-  },
   deckCount: {
     color: colors.cream,
     opacity: 0.75,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
-  },
-  flippedPreview: {
-    alignItems: 'center',
-    gap: 4,
   },
   flippedLabel: {
     color: colors.cream,
     opacity: 0.65,
-    fontSize: 11,
-  },
-  targetHint: {
-    flex: 1,
-    color: colors.cream,
-    opacity: 0.5,
-    fontSize: 12,
-    lineHeight: 16,
-    textAlign: 'right',
+    fontSize: 10,
   },
 });

@@ -2,22 +2,14 @@ import type { AppLanguage } from '../types/game';
 
 export type TranslationKey =
   | 'home.title'
-  | 'home.subtitle'
-  | 'home.korean'
   | 'home.play'
   | 'home.howToPlay'
   | 'home.settings'
-  | 'setup.title'
-  | 'setup.subtitle'
   | 'setup.gameMode'
   | 'setup.aiDifficulty'
-  | 'setup.start'
-  | 'setup.changeDefaults'
   | 'setup.comingSoon'
   | 'settings.title'
   | 'settings.language'
-  | 'settings.defaultDifficulty'
-  | 'settings.defaultMode'
   | 'settings.feedback'
   | 'settings.sound'
   | 'settings.soundDesc'
@@ -35,6 +27,7 @@ export type TranslationKey =
   | 'game.table'
   | 'game.cardCount'
   | 'game.chooseTable'
+  | 'game.chooseFlipMatch'
   | 'game.stack'
   | 'game.deck'
   | 'game.flipped'
@@ -58,28 +51,41 @@ export type TranslationKey =
   | 'rules.september.title'
   | 'rules.september.body'
   | 'common.back'
-  | 'common.home';
+  | 'common.home'
+  | 'common.player'
+  | 'result.headline.win'
+  | 'result.headline.lose'
+  | 'result.headline.draw'
+  | 'result.headline.nagari'
+  | 'result.headline.autoWinHuman'
+  | 'result.headline.autoWinAi'
+  | 'result.goCount'
+  | 'result.nagariHint'
+  | 'result.settlement'
+  | 'result.netChips'
+  | 'result.pays'
+  | 'result.goBak'
+  | 'result.piBak'
+  | 'result.gwangBak'
+  | 'result.scoreBreakdown'
+  | 'result.scoreLine'
+  | 'result.godoriSuffix'
+  | 'result.bonusPiSuffix'
+  | 'result.collected'
+  | 'result.playAgain';
 
 type TranslationParams = Record<string, string | number>;
 
 const en: Record<TranslationKey, string> = {
   'home.title': 'Hwatu',
-  'home.subtitle': 'Korean Go-Stop Card Game',
-  'home.korean': '화투 · 고스톱',
   'home.play': 'Play',
   'home.howToPlay': 'How to Play',
   'home.settings': 'Settings',
-  'setup.title': 'Game Setup',
-  'setup.subtitle': 'Choose mode and AI difficulty',
   'setup.gameMode': 'Game Mode',
   'setup.aiDifficulty': 'AI Difficulty',
-  'setup.start': 'Start Game',
-  'setup.changeDefaults': 'Change defaults in Settings',
   'setup.comingSoon': 'Coming soon',
   'settings.title': 'Settings',
   'settings.language': 'Language',
-  'settings.defaultDifficulty': 'Default AI Difficulty',
-  'settings.defaultMode': 'Default Game Mode',
   'settings.feedback': 'Feedback',
   'settings.sound': 'Sound Effects',
   'settings.soundDesc': 'Card flip, match, Go/Stop',
@@ -97,6 +103,7 @@ const en: Record<TranslationKey, string> = {
   'game.table': 'Table',
   'game.cardCount': '{count} cards',
   'game.chooseTable': 'Tap a matching table card',
+  'game.chooseFlipMatch': 'Tap a table card to match the flipped card',
   'game.stack': 'Stack {count}',
   'game.deck': 'Deck {count}',
   'game.flipped': 'Flipped',
@@ -128,26 +135,40 @@ const en: Record<TranslationKey, string> = {
     'The 9월 국화잔 can be scored as either 열끗 (animal) or 쌍피 (double junk, +2 pi). Choose when you collect it.',
   'common.back': '← Back',
   'common.home': '← Home',
+  'common.player': 'Player',
+  'result.headline.win': 'Congratulations!',
+  'result.headline.lose': 'You lose',
+  'result.headline.draw': 'Draw',
+  'result.headline.nagari': 'Nagari',
+  'result.headline.autoWinHuman': 'Four of a month — you win!',
+  'result.headline.autoWinAi': 'AI wins — four of a month',
+  'result.goCount': '{count} Go',
+  'result.nagariHint': 'Next hand pays {multiplier}×',
+  'result.settlement': 'Settlement',
+  'result.netChips': 'Net chips',
+  'result.pays': 'pays',
+  'result.goBak': ' · Go bak',
+  'result.piBak': ' · Pi bak',
+  'result.gwangBak': ' · Gwang bak',
+  'result.scoreBreakdown': 'Score breakdown',
+  'result.scoreLine':
+    '{player}: Bright {bright} · Animals {animal} · Ribbons {ribbon} · Junk {junk}{godori}{bonusPi}',
+  'result.godoriSuffix': ' · Godori {count}',
+  'result.bonusPiSuffix': ' · Bonus pi {count}',
+  'result.collected': 'Collected',
+  'result.playAgain': 'Play Again',
 };
 
 const ko: Record<TranslationKey, string> = {
   'home.title': 'Hwatu',
-  'home.subtitle': '한국 고스톱 카드 게임',
-  'home.korean': '화투 · 고스톱',
   'home.play': '플레이',
   'home.howToPlay': '게임 방법',
   'home.settings': '설정',
-  'setup.title': '게임 설정',
-  'setup.subtitle': '모드와 AI 난이도를 선택하세요',
   'setup.gameMode': '게임 모드',
   'setup.aiDifficulty': 'AI 난이도',
-  'setup.start': '시작',
-  'setup.changeDefaults': '기본값 변경 (설정)',
   'setup.comingSoon': '준비 중',
   'settings.title': '설정',
   'settings.language': '언어',
-  'settings.defaultDifficulty': '기본 AI 난이도',
-  'settings.defaultMode': '기본 게임 모드',
   'settings.feedback': '피드백',
   'settings.sound': '효과음',
   'settings.soundDesc': '카드 뒤집기, 매칭, 고/스톱',
@@ -164,7 +185,8 @@ const ko: Record<TranslationKey, string> = {
   'game.handCount': '손패 {count}',
   'game.table': '바닥',
   'game.cardCount': '{count}장',
-  'game.chooseTable': '매칭할 바닥 패를 선택하세요',
+  'game.chooseTable': '가져갈 바닥 패를 선택하세요',
+  'game.chooseFlipMatch': '뒤집은 패와 맞출 바닥 패를 선택하세요',
   'game.stack': '스택 {count}',
   'game.deck': '덱 {count}',
   'game.flipped': '방금 뒤집음',
@@ -196,6 +218,28 @@ const ko: Record<TranslationKey, string> = {
     '9월 국화잔은 열끗 또는 쌍피(+2피)로 채점할 수 있습니다. 가져갈 때 선택하세요.',
   'common.back': '← 뒤로',
   'common.home': '← 홈',
+  'common.player': '플레이어',
+  'result.headline.win': '축하합니다!',
+  'result.headline.lose': '패배',
+  'result.headline.draw': '무승부',
+  'result.headline.nagari': '나가리',
+  'result.headline.autoWinHuman': '4월 승 — 자동 승리!',
+  'result.headline.autoWinAi': 'AI 4월 승',
+  'result.goCount': '{count}고',
+  'result.nagariHint': '다음 판 {multiplier}배 정산',
+  'result.settlement': '정산',
+  'result.netChips': '순 획득 칩',
+  'result.pays': '정산',
+  'result.goBak': ' · 고박',
+  'result.piBak': ' · 피박',
+  'result.gwangBak': ' · 광박',
+  'result.scoreBreakdown': '점수 내역',
+  'result.scoreLine':
+    '{player}: 광 {bright} · 열끗 {animal} · 띠 {ribbon} · 피 {junk}{godori}{bonusPi}',
+  'result.godoriSuffix': ' · 고도리 {count}',
+  'result.bonusPiSuffix': ' · 보너스피 {count}',
+  'result.collected': '따낸 패',
+  'result.playAgain': '다시 하기',
 };
 
 const catalogs: Record<AppLanguage, Record<TranslationKey, string>> = { en, ko };

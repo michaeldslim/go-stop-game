@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../src/constants/colors';
 import { CARD_BORDER_RADIUS } from '../src/constants/layout';
 import { useTranslation } from '../src/i18n/useTranslation';
+import { useSettings } from '../src/settings/SettingsProvider';
 
 /** August bright (8월 광) — copied from assets/cards/3x/aug-bright.png */
 const HOME_LOGO_WIDTH = 136;
@@ -13,6 +14,21 @@ const HOME_LOGO_HEIGHT = 222;
 export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { settings, loaded } = useSettings();
+
+  const startGame = () => {
+    if (!loaded) {
+      return;
+    }
+
+    router.push({
+      pathname: '/game',
+      params: {
+        mode: settings.defaultGameMode,
+        difficulty: settings.defaultAiDifficulty,
+      },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -24,12 +40,14 @@ export default function HomeScreen() {
           accessibilityLabel="August bright hwatu card"
         />
         <Text style={styles.title}>{t('home.title')}</Text>
-        <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
-        <Text style={styles.korean}>{t('home.korean')}</Text>
       </View>
 
       <View style={styles.actions}>
-        <Pressable style={styles.primaryButton} onPress={() => router.push('/setup')}>
+        <Pressable
+          style={[styles.primaryButton, !loaded && styles.primaryButtonDisabled]}
+          onPress={startGame}
+          disabled={!loaded}
+        >
           <Text style={styles.primaryButtonText}>{t('home.play')}</Text>
         </Pressable>
         <Pressable style={styles.secondaryButton} onPress={() => router.push('/rules')}>
@@ -69,17 +87,6 @@ const styles = StyleSheet.create({
     color: colors.gold,
     letterSpacing: 2,
   },
-  subtitle: {
-    fontSize: 16,
-    color: colors.cream,
-    opacity: 0.9,
-  },
-  korean: {
-    fontSize: 20,
-    color: colors.cream,
-    opacity: 0.75,
-    marginTop: 4,
-  },
   actions: {
     gap: 12,
   },
@@ -88,6 +95,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
   },
   primaryButtonText: {
     color: colors.felt,

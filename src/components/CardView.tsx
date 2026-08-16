@@ -11,6 +11,7 @@ interface CardViewProps {
   faceDown?: boolean;
   onPress?: () => void;
   selected?: boolean;
+  choosable?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }
@@ -21,6 +22,7 @@ export function CardView({
   faceDown = false,
   onPress,
   selected = false,
+  choosable = false,
   disabled = false,
   style,
 }: CardViewProps) {
@@ -44,6 +46,7 @@ export function CardView({
         dimensions,
         styles.shadow,
         selected && styles.selected,
+        choosable && styles.choosable,
         disabled && styles.disabled,
         style,
       ]}
@@ -88,6 +91,15 @@ const styles = StyleSheet.create({
   selected: {
     borderColor: colors.gold,
     borderWidth: 2,
+  },
+  choosable: {
+    borderColor: colors.gold,
+    borderWidth: 3,
+    shadowColor: colors.gold,
+    shadowOpacity: 0.55,
+    shadowRadius: 8,
+    elevation: 8,
+    transform: [{ scale: 1.06 }],
   },
   disabled: {
     opacity: 0.45,

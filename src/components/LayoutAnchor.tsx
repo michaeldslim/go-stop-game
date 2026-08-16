@@ -48,8 +48,18 @@ interface LayoutAnchorProps extends ViewProps {
 }
 
 export function LayoutAnchor({ anchorKey, children, style, ...rest }: LayoutAnchorProps) {
-  const { register } = useLayoutAnchors();
+  const context = useContext(LayoutAnchorContext);
   const viewRef = useRef<View>(null);
+
+  if (!context) {
+    return (
+      <View style={style} {...rest}>
+        {children}
+      </View>
+    );
+  }
+
+  const { register } = context;
 
   const measure = useCallback(() => {
     viewRef.current?.measureInWindow((x, y, width, height) => {

@@ -4,13 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CollectedPileView } from '../src/components/CollectedPileView';
 import { ScreenHeader } from '../src/components/ScreenHeader';
 import { colors } from '../src/constants/colors';
-import { getAiDifficultyOption, getLocalizedText } from '../src/constants/gameOptions';
 import { createGame } from '../src/game/createGame';
 import { computeSettlement } from '../src/game/settlement';
 import { calculateScore, calculateHwatuSimpleScore } from '../src/game/scoring';
-import { useSettings } from '../src/settings/SettingsProvider';
+import { useTranslation } from '../src/i18n/useTranslation';
 import type { AiDifficulty, GameMode } from '../src/types/game';
 import type { CardId, FinishReason } from '../src/types/gameState';
+import type { TranslationKey } from '../src/i18n/translations';
 
 function parseDifficulty(value: string | string[] | undefined): AiDifficulty {
   if (
@@ -51,37 +51,24 @@ function parseFinishReason(value: string | string[] | undefined): FinishReason {
   return 'handsEmpty';
 }
 
-function headline(
-  language: 'en' | 'ko',
+function headlineKey(
   humanWon: boolean,
   isDraw: boolean,
   finishReason: FinishReason,
-): string {
+): TranslationKey {
   if (isDraw) {
-    return language === 'ko' ? '무승부' : 'Draw';
+    return finishReason === 'nagari' ? 'result.headline.nagari' : 'result.headline.draw';
   }
 
   if (finishReason === 'autoWin') {
-    return humanWon
-      ? language === 'ko'
-        ? '4월 승 — 자동 승리!'
-        : 'Four of a month — you win!'
-      : language === 'ko'
-        ? 'AI 4월 승'
-        : 'AI wins — four of a month';
+    return humanWon ? 'result.headline.autoWinHuman' : 'result.headline.autoWinAi';
   }
 
   if (finishReason === 'nagari') {
-    return language === 'ko' ? '나가리' : 'Nagari';
+    return 'result.headline.nagari';
   }
 
-  return humanWon
-    ? language === 'ko'
-      ? '승리!'
-      : 'You win!'
-    : language === 'ko'
-      ? '패배'
-      : 'You lose';
+  return humanWon ? 'result.headline.win' : 'result.headline.lose';
 }
 
 export default function ResultScreen() {
@@ -104,12 +91,9 @@ export default function ResultScreen() {
     opponentBonusPi?: string;
     winnerIndex?: string;
   }>();
-  const { settings } = useSettings();
-  const { language } = settings;
-
+  const { t } = useTranslation();
   const mode = parseMode(params.mode);
   const difficulty = parseDifficulty(params.difficulty);
-  const difficultyOption = getAiDifficultyOption(difficulty);
   const humanScore = Number(params.humanScore ?? 0);
   const humanCollected = parseCardIds(params.humanCollected ?? '');
   const humanGoCount = Number(params.humanGoCount ?? 0);
@@ -180,23 +164,20 @@ export default function ResultScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScreenHeader
-        title={headline(language, humanWon, isDraw, finishReason)}
-        subtitle={getLocalizedText(language, difficultyOption.labels)}
+        title={t(headlineKey(humanWon, isDraw, finishReason))}
         onBack={() => router.replace('/')}
-        backLabel={language === 'ko' ? '← 홈' : '← Home'}
+        backLabel={t('common.home')}
       />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.scoreRow}>
           <View style={styles.scoreCard}>
-            <Text style={styles.scoreLabel}>{language === 'ko' ? '나' : 'You'}</Text>
+            <Text style={styles.scoreLabel}>{t('common.player')}</Text>
             <Text style={[styles.scoreValue, humanWon && styles.winnerScore]}>
               {mode === 'hwatu' ? humanHwatuScore : humanScore}
             </Text>
             {humanGoCount > 0 ? (
-              <Text style={styles.goCount}>
-                {language === 'ko' ? `${humanGoCount}고` : `${humanGoCount} Go`}
-              </Text>
+              <Text style={styles.goCount}>{t('result.goCount', { count: humanGoCount })}</Text>
             ) : null}
           </View>
           {opponentScores.map((score, index) => {
@@ -209,9 +190,7 @@ export default function ResultScreen() {
                 </Text>
                 {opponentGoCounts[index] && Number(opponentGoCounts[index]) > 0 ? (
                   <Text style={styles.goCount}>
-                    {language === 'ko'
-                      ? `${opponentGoCounts[index]}고`
-                      : `${opponentGoCounts[index]} Go`}
+                    {t('result.goCount', { count: Number(opponentGoCounts[index]) })}
                   </Text>
                 ) : null}
               </View>
@@ -221,19 +200,15 @@ export default function ResultScreen() {
 
         {finishReason === 'nagari' ? (
           <Text style={styles.nagariHint}>
-            {language === 'ko'
-              ? `다음 판 ${nextHandMultiplier}배 정산`
-              : `Next hand pays ${nextHandMultiplier}×`}
+            {t('result.nagariHint', { multiplier: nextHandMultiplier })}
           </Text>
         ) : null}
 
         {settlement && !isDraw ? (
           <View style={styles.breakdownSection}>
-            <Text style={styles.sectionTitle}>
-              {language === 'ko' ? '정산' : 'Settlement'}
-            </Text>
+            <Text style={styles.sectionTitle}>{t('result.settlement')}</Text>
             <Text style={styles.breakdownLine}>
-              {language === 'ko' ? '순 획득 칩' : 'Net chips'}:{' '}
+              {t('result.netChips')}:{' '}
               <Text style={styles.chipValue}>
                 {settlement.humanNetChips > 0 ? '+' : ''}
                 {settlement.humanNetChips}
@@ -241,11 +216,10 @@ export default function ResultScreen() {
             </Text>
             {settlement.players.map((line) => (
               <Text key={line.playerIndex} style={styles.breakdownLine}>
-                {opponentNames[line.playerIndex - 1] ?? 'AI'}:{' '}
-                {language === 'ko' ? '정산' : 'pays'} {line.totalChips}
-                {line.goBakVictim ? (language === 'ko' ? ' · 고박' : ' · Go bak') : ''}
-                {line.piBak ? (language === 'ko' ? ' · 피박' : ' · Pi bak') : ''}
-                {line.gwangBak ? (language === 'ko' ? ' · 광박' : ' · Gwang bak') : ''}
+                {opponentNames[line.playerIndex - 1] ?? 'AI'}: {t('result.pays')} {line.totalChips}
+                {line.goBakVictim ? t('result.goBak') : ''}
+                {line.piBak ? t('result.piBak') : ''}
+                {line.gwangBak ? t('result.gwangBak') : ''}
               </Text>
             ))}
           </View>
@@ -253,23 +227,27 @@ export default function ResultScreen() {
 
         {humanBreakdown ? (
           <View style={styles.breakdownSection}>
-            <Text style={styles.sectionTitle}>
-              {language === 'ko' ? '점수 내역' : 'Score breakdown'}
-            </Text>
+            <Text style={styles.sectionTitle}>{t('result.scoreBreakdown')}</Text>
             <Text style={styles.breakdownLine}>
-              {language === 'ko' ? '나' : 'You'}: 광 {humanBreakdown.bright} · 열끗{' '}
-              {humanBreakdown.animal} · 띠 {humanBreakdown.ribbon} · 피 {humanBreakdown.junk}
-              {humanBreakdown.godori > 0 ? ` · 고도리 ${humanBreakdown.godori}` : ''}
-              {humanBonusPi > 0 ? ` · 보너스피 ${humanBonusPi}` : ''}
+              {t('result.scoreLine', {
+                player: t('common.player'),
+                bright: humanBreakdown.bright,
+                animal: humanBreakdown.animal,
+                ribbon: humanBreakdown.ribbon,
+                junk: humanBreakdown.junk,
+                godori:
+                  humanBreakdown.godori > 0
+                    ? t('result.godoriSuffix', { count: humanBreakdown.godori })
+                    : '',
+                bonusPi: humanBonusPi > 0 ? t('result.bonusPiSuffix', { count: humanBonusPi }) : '',
+              })}
             </Text>
           </View>
         ) : null}
 
         <View style={styles.pileSection}>
-          <Text style={styles.sectionTitle}>
-            {language === 'ko' ? '따낸 패' : 'Collected'}
-          </Text>
-          <Text style={styles.pileLabel}>{language === 'ko' ? '나' : 'You'}</Text>
+          <Text style={styles.sectionTitle}>{t('result.collected')}</Text>
+          <Text style={styles.pileLabel}>{t('common.player')}</Text>
           <CollectedPileView cardIds={humanCollected} />
           {opponentCollectedList.map((collected, index) => (
             <View key={opponentNames[index] ?? index}>
@@ -280,9 +258,7 @@ export default function ResultScreen() {
         </View>
 
         <Pressable style={styles.playAgain} onPress={playAgain}>
-          <Text style={styles.playAgainText}>
-            {language === 'ko' ? '다시 하기' : 'Play Again'}
-          </Text>
+          <Text style={styles.playAgainText}>{t('result.playAgain')}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

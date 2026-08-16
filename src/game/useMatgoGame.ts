@@ -15,6 +15,7 @@ import {
   isHumanTurn,
   needsHumanSepCupChoice,
   needsHumanTableChoice,
+  getPendingTableChoice,
   playBomb,
   playHandCard,
 } from './turnEngine';
@@ -223,6 +224,11 @@ export function useMatgoGame(
   );
 
   const humanIndex = game.players.findIndex((player) => player.isHuman);
+  const pendingTableChoice = getPendingTableChoice(boardGame);
+  const pendingHandCardId = pendingTableChoice?.handCardId ?? null;
+  const highlightedHandCards = pendingHandCardId ? new Set([pendingHandCardId]) : undefined;
+  const choosableTableIndices = new Set(pendingTableChoice?.matchIndices ?? []);
+
   const canShake =
     isHumanTurn(boardGame) &&
     !isAnimating &&
@@ -258,6 +264,7 @@ export function useMatgoGame(
     playableHandCardIds: getPlayableHandCardIds(boardGame),
     isHumanTurn: isHumanTurn(boardGame) && !isAnimating,
     needsTableChoice: needsHumanTableChoice(boardGame) && !isAnimating,
+    pendingTableChoice,
     showGoStopModal:
       game.phase === 'goStopPrompt' && game.goStopPlayerIndex === humanIndex,
     showSepCupModal: needsHumanSepCupChoice(boardGame) && !isAnimating,
@@ -267,5 +274,8 @@ export function useMatgoGame(
     activeFlight,
     onFlightComplete,
     inFlightCardId,
+    pendingHandCardId,
+    highlightedHandCards,
+    choosableTableIndices,
   };
 }

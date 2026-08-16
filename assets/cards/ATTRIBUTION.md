@@ -1,6 +1,6 @@
 # Card artwork attribution
 
-Hwatu card face images are derived from Wikimedia Commons Hanafuda graphics
+Hwatu card face images are derived from Wikimedia Commons Hwatu graphics
 (Louie Mantia, Jr. and contributors), adapted for this app.
 
 - License: [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
@@ -9,4 +9,4 @@ Hwatu card face images are derived from Wikimedia Commons Hanafuda graphics
 When modifying or redistributing card assets, share under the same license and
 include attribution.
 
-Import pipeline: `npm run import:cards` (optional staging: `assets/cards/source/*.webp`).
+Import pipeline: `npm run import:cards` (sources: `assets/resource/*.webp`).
