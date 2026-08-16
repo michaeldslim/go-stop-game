@@ -94,8 +94,8 @@ export const CARD_CATALOG: CardDefinition[] = [
   makeCard(10, 'junk-2', 'junk', { en: 'Maple Junk', ko: '단풍 피' }),
   makeCard(10, 'junk-3', 'junk', { en: 'Maple Junk', ko: '단풍 피' }),
 
-  // November
-  makeCard(11, 'animal', 'animal', { en: 'Raven', ko: '까치' }),
+  // November — phoenix is the month bright (봉황 광), not 열끗
+  makeCard(11, 'bright', 'bright', { en: 'Phoenix Bright', ko: '봉황광' }),
   makeCard(11, 'junk-1', 'junk', { en: 'Willow Junk', ko: '오동 피' }),
   makeCard(11, 'junk-2', 'junk', { en: 'Willow Junk', ko: '오동 피' }),
   { ...makeCard(11, 'junk-double', 'junk', { en: 'Double Junk', ko: '쌍피' }), piValue: 2 },

@@ -6,7 +6,7 @@ import { ScreenHeader } from '../src/components/ScreenHeader';
 import { colors } from '../src/constants/colors';
 import { createGame } from '../src/game/createGame';
 import { computeSettlement } from '../src/game/settlement';
-import { calculateScore, calculateHwatuSimpleScore } from '../src/game/scoring';
+import { calculateScore, calculateHwatuSimpleScore, countCollectedCards, type ScoreBreakdown } from '../src/game/scoring';
 import { useTranslation } from '../src/i18n/useTranslation';
 import type { AiDifficulty, GameMode } from '../src/types/game';
 import type { CardId, FinishReason } from '../src/types/gameState';
@@ -71,6 +71,23 @@ function headlineKey(
   return humanWon ? 'result.headline.win' : 'result.headline.lose';
 }
 
+function scoreExtras(breakdown: ScoreBreakdown, t: ReturnType<typeof useTranslation>['t']): string {
+  let extras = '';
+  if (breakdown.godori > 0) {
+    extras += t('result.godoriSuffix', { count: breakdown.godori });
+  }
+  if (breakdown.hongdan > 0) {
+    extras += t('result.hongdanSuffix', { count: breakdown.hongdan });
+  }
+  if (breakdown.cheongdan > 0) {
+    extras += t('result.cheongdanSuffix', { count: breakdown.cheongdan });
+  }
+  if (breakdown.chodan > 0) {
+    extras += t('result.chodanSuffix', { count: breakdown.chodan });
+  }
+  return extras;
+}
+
 export default function ResultScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -110,10 +127,6 @@ export default function ResultScreen() {
   const opponentGoCounts = (params.opponentGoCounts ?? '').split('|');
   const opponentBonusPiList = (params.opponentBonusPi ?? '').split('|');
 
-  const humanBreakdown =
-    mode === 'hwatu'
-      ? null
-      : calculateScore(humanCollected, humanGoCount, humanBonusPi);
   const humanHwatuScore =
     mode === 'hwatu' ? calculateHwatuSimpleScore(humanCollected) : humanScore;
 
@@ -149,6 +162,16 @@ export default function ResultScreen() {
   }
 
   const settlement = !isDraw ? computeSettlement(settlementState) : null;
+
+  const humanFlexRoles = settlementState.players[0]?.flexCardRoles ?? {};
+  const humanBreakdown =
+    mode === 'hwatu'
+      ? null
+      : calculateScore(humanCollected, humanGoCount, humanBonusPi, humanFlexRoles);
+  const humanCollectedCounts =
+    mode === 'hwatu'
+      ? null
+      : countCollectedCards(humanCollected, humanBonusPi, humanFlexRoles);
 
   const playAgain = () => {
     router.replace({
@@ -225,23 +248,31 @@ export default function ResultScreen() {
           </View>
         ) : null}
 
-        {humanBreakdown ? (
+        {humanBreakdown && humanCollectedCounts ? (
           <View style={styles.breakdownSection}>
             <Text style={styles.sectionTitle}>{t('result.scoreBreakdown')}</Text>
             <Text style={styles.breakdownLine}>
-              {t('result.scoreLine', {
-                player: t('common.player'),
+              {t('result.collectedCounts', {
+                bright: humanCollectedCounts.brights,
+                animal: humanCollectedCounts.animals,
+                ribbon: humanCollectedCounts.ribbons,
+                pi: humanCollectedCounts.pi,
+              })}
+            </Text>
+            <Text style={styles.breakdownLine}>
+              {t('result.scorePoints', {
                 bright: humanBreakdown.bright,
                 animal: humanBreakdown.animal,
                 ribbon: humanBreakdown.ribbon,
                 junk: humanBreakdown.junk,
-                godori:
-                  humanBreakdown.godori > 0
-                    ? t('result.godoriSuffix', { count: humanBreakdown.godori })
-                    : '',
-                bonusPi: humanBonusPi > 0 ? t('result.bonusPiSuffix', { count: humanBonusPi }) : '',
+                extras: scoreExtras(humanBreakdown, t),
               })}
             </Text>
+            {humanBonusPi > 0 ? (
+              <Text style={styles.breakdownLine}>
+                {t('result.bonusPiLine', { count: humanBonusPi })}
+              </Text>
+            ) : null}
           </View>
         ) : null}
 

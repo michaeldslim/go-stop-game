@@ -308,7 +308,7 @@ export const CARD_ART = {
   `)),
 
   // ── November (Willow) ──
-  'nov-animal': () => wrapSvg(baseCard(`
+  'nov-bright': () => wrapSvg(baseCard(`
     ${willowBranch(300, 400, 1.5)}
     ${raven(300, 300, 1.4)}
   `)),

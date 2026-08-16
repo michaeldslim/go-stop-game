@@ -166,6 +166,28 @@ function applyGoModifiers(baseTotal: number, goCount: number): { goBonus: number
   return { goBonus, goMultiplier, total };
 }
 
+export interface CollectedCounts {
+  brights: number;
+  animals: number;
+  ribbons: number;
+  pi: number;
+}
+
+/** Raw card counts (and total pi including bonus) for display — not scoring points. */
+export function countCollectedCards(
+  collected: CardId[],
+  bonusPi = 0,
+  flexCardRoles: Partial<Record<CardId, SepCupRole>> = {},
+): CollectedCounts {
+  const counts = countByType(collected, bonusPi, flexCardRoles);
+  return {
+    brights: counts.brights,
+    animals: counts.animals,
+    ribbons: counts.ribbons,
+    pi: counts.pi,
+  };
+}
+
 export function calculateScore(
   collected: CardId[],
   goCount = 0,

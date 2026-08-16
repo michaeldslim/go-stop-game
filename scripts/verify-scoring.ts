@@ -19,7 +19,7 @@ assert(calculateScore(biGwang).total === 2, '비광 total should be 2');
 
 // 4 brights in this deck (Jan, Mar, Aug, Dec rain) = 4 points
 const allBrights = CARD_CATALOG.filter((c) => c.type === 'bright').map((c) => c.id);
-assert(allBrights.length === 4, 'catalog has 4 bright cards');
+assert(allBrights.length === 5, 'catalog has 5 bright cards');
 assert(calculateScore(allBrights).bright === 4, '4 brights should score 4');
 assert(calculateScore(allBrights).total === 4, '4 brights total should be 4');
 

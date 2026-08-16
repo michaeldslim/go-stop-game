@@ -68,8 +68,13 @@ export type TranslationKey =
   | 'result.piBak'
   | 'result.gwangBak'
   | 'result.scoreBreakdown'
-  | 'result.scoreLine'
+  | 'result.collectedCounts'
+  | 'result.scorePoints'
   | 'result.godoriSuffix'
+  | 'result.hongdanSuffix'
+  | 'result.cheongdanSuffix'
+  | 'result.chodanSuffix'
+  | 'result.bonusPiLine'
   | 'result.bonusPiSuffix'
   | 'result.collected'
   | 'result.playAgain';
@@ -151,10 +156,16 @@ const en: Record<TranslationKey, string> = {
   'result.piBak': ' · Pi bak',
   'result.gwangBak': ' · Gwang bak',
   'result.scoreBreakdown': 'Score breakdown',
-  'result.scoreLine':
-    '{player}: Bright {bright} · Animals {animal} · Ribbons {ribbon} · Junk {junk}{godori}{bonusPi}',
-  'result.godoriSuffix': ' · Godori {count}',
-  'result.bonusPiSuffix': ' · Bonus pi {count}',
+  'result.collectedCounts':
+    'Collected: {bright} bright · {animal} animals · {ribbon} ribbons · {pi} pi',
+  'result.scorePoints':
+    'Points: bright {bright} · animals {animal} · ribbons {ribbon} · junk {junk}{extras}',
+  'result.godoriSuffix': ' · godori {count}',
+  'result.hongdanSuffix': ' · hongdan {count}',
+  'result.cheongdanSuffix': ' · cheongdan {count}',
+  'result.chodanSuffix': ' · chodan {count}',
+  'result.bonusPiLine': 'Bonus pi from special moves: {count}',
+  'result.bonusPiSuffix': ' · bonus pi {count}',
   'result.collected': 'Collected',
   'result.playAgain': 'Play Again',
 };
@@ -234,9 +245,15 @@ const ko: Record<TranslationKey, string> = {
   'result.piBak': ' · 피박',
   'result.gwangBak': ' · 광박',
   'result.scoreBreakdown': '점수 내역',
-  'result.scoreLine':
-    '{player}: 광 {bright} · 열끗 {animal} · 띠 {ribbon} · 피 {junk}{godori}{bonusPi}',
+  'result.collectedCounts':
+    '따낸 패: 광 {bright} · 열끗 {animal} · 띠 {ribbon} · 피 {pi}',
+  'result.scorePoints':
+    '점수: 광 {bright} · 열끗 {animal} · 띠 {ribbon} · 피 {junk}{extras}',
   'result.godoriSuffix': ' · 고도리 {count}',
+  'result.hongdanSuffix': ' · 홍단 {count}',
+  'result.cheongdanSuffix': ' · 청단 {count}',
+  'result.chodanSuffix': ' · 초단 {count}',
+  'result.bonusPiLine': '특수 패 보너스 피: {count}',
   'result.bonusPiSuffix': ' · 보너스피 {count}',
   'result.collected': '따낸 패',
   'result.playAgain': '다시 하기',

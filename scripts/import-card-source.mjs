@@ -72,8 +72,8 @@ const SOURCE_ENTRIES = [
   // No October ribbon in Hwatu — Tanzaku used as 3rd junk
   ['500px-Hwatu_October_Tanzaku.svg.webp', 'oct-ribbon'],
 
-  // November Hikari is the Hwatu animal (phoenix/raven); three Kasu are 피 + 쌍피
-  ['500px-Hwatu_November_Hikari.svg.webp', 'nov-animal'],
+  // November Hikari is the phoenix bright (봉황 광); three Kasu are 피 + 쌍피
+  ['500px-Hwatu_November_Hikari.svg.webp', 'nov-bright'],
   ['500px-Hwatu_November_Kasu_1.svg.webp', 'nov-junk-1'],
   ['500px-Hwatu_November_Kasu_2.svg.webp', 'nov-junk-2'],
   ['500px-Hwatu_November_Kasu_3.svg.webp', 'nov-junk-double'],
@@ -97,7 +97,7 @@ const EXPECTED_IDS = [
   'aug-animal', 'aug-bright', 'aug-ribbon', 'aug-junk-1',
   'sep-junk-double', 'sep-ribbon', 'sep-junk-1', 'sep-junk-2',
   'oct-animal', 'oct-junk-1', 'oct-junk-2', 'oct-ribbon',
-  'nov-animal', 'nov-junk-1', 'nov-junk-2', 'nov-junk-double',
+  'nov-bright', 'nov-junk-1', 'nov-junk-2', 'nov-junk-double',
   'dec-rain', 'dec-animal', 'dec-ribbon', 'dec-junk-double',
 ];
 
