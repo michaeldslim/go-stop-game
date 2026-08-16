@@ -1,6 +1,6 @@
 ---
 name: Hwatu Mobile App
-overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 2 진행 중 — 덱·딜·턴 엔진 완료, 점수·Go/Stop·AI 튜닝 남음.
+overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 2 진행 중 — 덱·딜·턴·따낸 패 UI 완료, 점수·Go/Stop·AI 튜닝·손패 fan 남음.
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩, 앱 아이콘, 기본 폴더 구조
@@ -21,7 +21,7 @@ todos:
     content: 턴 진행 — 손패 카드 플레이 → 덱 뒤집기 → 매칭·수집
     status: completed
   - id: board-ui
-    content: 테이블(필드) + 손패 + 수집 더미 UI — 카드 고품질 렌더링
+    content: 테이블(필드) + 손패 + 수집 더미 UI — 따낸 패 CollectedPileView 완료, 손패 fan 레이아웃 남음
     status: pending
   - id: special-start
     content: 시작 특수 조건 (4광/4월 자동승, 3장 스택, 무승부)
@@ -205,6 +205,7 @@ src/
     gameUtils.ts           # cloneGameState, turn helpers
   components/
     CardView.tsx           # expo-image card renderer
+    CollectedPileView.tsx  # captured pile — 70/30 split, 광·띠·열끗 cascade + 피 grid
     ScreenHeader.tsx       # back + title header
     OptionPicker.tsx       # segmented option list
     SettingsToggleRow.tsx  # switch row for settings
@@ -445,17 +446,29 @@ No Go/Stop — play until cards exhausted. Per-card scoring:
 
 ```
 ┌─────────────────────────────┐
-│  AI [초보]     score: 3     │  ← opponent top; difficulty badge
+│ ← Leave          Your turn  │  ← compact top bar (no title)
 ├─────────────────────────────┤
-│                             │
+│ AI · [difficulty]  손패 N   │
+│ [face-down hand]            │
+│ [AI collected pile tray]    │  ← CollectedPileView
+├─────────────────────────────┤
 │     TABLE (face-up cards)   │
-│                             │
 ├─────────────────────────────┤
-│  [AI collected]  deck:#      │
+│  deck:#   flipped   target  │
 ├─────────────────────────────┤
-│  YOUR HAND (fan layout)     │
-│  Score: 5  [Go] [Stop]      │  ← human only when score ≥ target
+│ [your collected pile tray]  │
+│ YOUR HAND (horizontal)      │
 └─────────────────────────────┘
+```
+
+**Collected pile layout** (`CollectedPileView` — 70/30 tray):
+
+```
+┌────────────────────────────────────┐
+│ [광]              [피×5]           │  ← left 70%: 광·띠·열끗
+│   [띠][띠]          [피×5]         │     cascade (overlap + offset)
+│     [열끗]        right 30%: 피    │     right: 5/row, overlap, top-aligned
+└────────────────────────────────────┘
 ```
 
 3P 고스톱: two AI rows at top (same difficulty).
@@ -466,9 +479,11 @@ No Go/Stop — play until cards exhausted. Per-card scoring:
 - Human chooses table card when multiple same-month matches
 - AI auto-plays on its turn (`runAiTurn`, 700ms delay)
 - 뻑 (뻑/싸다): flip onto pair stacks 3 cards on table
-- Captured counts, deck count, last-flipped preview, status messages
+- **Collected pile UI** — `CollectedPileView` for human + AI (`pile` card size 32×52pt)
+- Compact game header (back + turn hint; setup badges moved to deck row)
+- Deck count, last-flipped preview, status messages
 - Game ends when both hands empty (`phase: finished`)
-- **Not yet:** collected pile UI, fan hand layout, scoring, Go/Stop, result screen
+- **Not yet:** fan hand layout, scoring, Go/Stop, result screen
 
 ### Go/Stop Modal
 
@@ -544,7 +559,10 @@ interface MatgoGameState {
   - `dealMatgo2P` — 5 each → 4 table → 5 each → 4 table, from dealer's right
   - `createMatgoGame` — full setup; 20 cards remain in center deck
   - `scripts/verify-matgo-deal.ts` — 100-seed invariant check
-- [~] Table layout + hand UI — playable board in `app/game.tsx` (collected pile view, fan layout pending)
+- [~] Table layout + hand UI — playable board in `app/game.tsx`
+  - [x] `CollectedPileView` — 70/30 tray; left 광·띠·열끗 cascade; right 피 5/row overlap stack
+  - [x] Compact game header (title/badges removed during play)
+  - [ ] Fan hand layout
 - [x] Turn engine: play → flip → collect (human + AI turns)
   - `turnEngine.ts` — hand play, deck flip, month matching, collection
   - Human pending choice when 2+ table matches on hand play (or rare flip choice)
@@ -614,6 +632,7 @@ Most special moves are now documented above (쪽·따닥·폭탄·흔들기·뻑
 - [x] Correct dealing (10 hand / 8 table) and dealer selection (human ↔ AI seats)
 - [x] Turn order and play (human ↔ AI) — dealer first, alternating turns
 - [x] Matching, stacking (뻑), and collection work for both sides
+- [x] Captured cards visible for human and AI (`CollectedPileView`)
 - [ ] Score matches manual calculation for all yaku
 - [ ] Human Go/Stop modal at target; AI decides Go/Stop without blocking UI
 - [ ] Result screen shows win/loss vs AI
@@ -631,4 +650,4 @@ Most special moves are now documented above (쪽·따닥·폭탄·흔들기·뻑
 
 ## Next Step
 
-**Phase 2** — Pre-play specials, **scoring engine**, Go/Stop modal, result screen, board polish (collected piles, fan hand), AI tuning per difficulty.
+**Phase 2** — Pre-play specials, **scoring engine**, Go/Stop modal, result screen, fan hand layout, AI tuning per difficulty.
