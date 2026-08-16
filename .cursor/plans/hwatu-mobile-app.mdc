@@ -1,6 +1,6 @@
 ---
 name: Hwatu Mobile App
-overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 1 완료. Phase 2 — 덱·턴·점수 + AI 난이도(초보~전문가).
+overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 2 진행 중 — 덱·딜·턴 엔진 완료, 점수·Go/Stop·AI 튜닝 남음.
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩, 앱 아이콘, 기본 폴더 구조
@@ -16,12 +16,12 @@ todos:
     status: completed
   - id: deck-engine
     content: 48장 덱 생성·셔플·딜링 — Human vs AI (맞고 2P 기본, 고스톱 3P는 1인+AI×2)
-    status: pending
-  - id: board-ui
-    content: 테이블(필드) + 손패 + 수집 더미 UI — 카드 고품질 렌더링
-    status: pending
+    status: completed
   - id: turn-engine
     content: 턴 진행 — 손패 카드 플레이 → 덱 뒤집기 → 매칭·수집
+    status: completed
+  - id: board-ui
+    content: 테이블(필드) + 손패 + 수집 더미 UI — 카드 고품질 렌더링
     status: pending
   - id: special-start
     content: 시작 특수 조건 (4광/4월 자동승, 3장 스택, 무승부)
@@ -185,10 +185,24 @@ scripts/
   import-card-source.mjs   # optional: WebP staging → master PNG
   generate-card-sizes.sh     # master → 1x/2x/3x (sips)
   generate-placeholder-cards.mjs  # legacy SVG generator (unused)
+  verify-matgo-deal.ts     # deal invariant checks (10+10 hand, 8 table, 20 deck)
+  verify-turn-engine.ts    # turn play conserves 48 cards across simulated games
 src/
   cards/
     cardCatalog.ts         # 48 card definitions + ids
     getCardImage.ts        # density-aware require() map
+    getCardById.ts         # CardId → CardDefinition lookup
+  game/
+    deck.ts                # createDeck, shuffleDeck, drawCards
+    cardRank.ts            # dealer draw ranking (month + type)
+    deal.ts                # chooseDealer, dealMatgo2P
+    createGame.ts          # createMatgoGame (shuffle → dealer → deal)
+    constants.ts           # hand/table/target sizes per mode
+    tableCards.ts          # table pile helpers, month matching
+    turnEngine.ts          # playHandCard, flip, collect, 뻑 stack
+    ai.ts                  # runAiTurn — basic match-first heuristics
+    useMatgoGame.ts        # React reducer hook + AI turn effect
+    gameUtils.ts           # cloneGameState, turn helpers
   components/
     CardView.tsx           # expo-image card renderer
     ScreenHeader.tsx       # back + title header
@@ -203,11 +217,12 @@ src/
   types/
     hwatu.ts               # CardDefinition, Month, CardType
     game.ts                # AiDifficulty, GameMode, AppSettings
+    gameState.ts           # MatgoGameState, PlayerState, TableCard, PendingAction
 app/
   index.tsx                # Home
   setup.tsx                # Game setup (mode + AI difficulty)
   settings.tsx             # Settings (defaults, language, sound, haptics)
-  game.tsx                 # Card preview (Phase 1); gameplay (Phase 2)
+  game.tsx                 # Playable matgo — deal, turns, tap hand/table
   rules.tsx                # Rules placeholder
 ```
 
@@ -423,10 +438,10 @@ No Go/Stop — play until cards exhausted. Per-card scoring:
 
 - **Game mode**: 맞고 (vs 1 AI) — default; 고스톱 (vs 2 AI) — disabled, Phase 3
 - **AI difficulty**: 초보 · 중급 · 고급 · 전문가 (`OptionPicker`)
-- **Start** → card preview with mode/difficulty badges (Phase 2: deal and begin)
+- **Start** → `createMatgoGame()` — real shuffle, dealer draw, deal (10 hand / 8 table)
 - Link to Settings for changing defaults
 
-### Game Screen (portrait) — 맞고 2P example
+### Game Screen (portrait) — 맞고 2P ✅ (playable turns; scoring pending)
 
 ```
 ┌─────────────────────────────┐
@@ -444,6 +459,16 @@ No Go/Stop — play until cards exhausted. Per-card scoring:
 ```
 
 3P 고스톱: two AI rows at top (same difficulty).
+
+**Implemented in `app/game.tsx`:**
+- Real matgo deal on each start (human seat 0, AI seat 1)
+- **Turn loop:** tap hand card → auto flip → collect / stack / table
+- Human chooses table card when multiple same-month matches
+- AI auto-plays on its turn (`runAiTurn`, 700ms delay)
+- 뻑 (뻑/싸다): flip onto pair stacks 3 cards on table
+- Captured counts, deck count, last-flipped preview, status messages
+- Game ends when both hands empty (`phase: finished`)
+- **Not yet:** collected pile UI, fan hand layout, scoring, Go/Stop, result screen
 
 ### Go/Stop Modal
 
@@ -464,7 +489,7 @@ When score ≥ target, block further play until decision:
 
 ## Domain Types
 
-**Implemented** (`src/types/hwatu.ts`, `src/types/game.ts`):
+**Implemented** (`src/types/hwatu.ts`, `src/types/game.ts`, `src/types/gameState.ts`):
 
 ```ts
 type Month = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
@@ -476,32 +501,19 @@ type AppLanguage = 'en' | 'ko';
 
 interface CardDefinition { /* id, month, type, piValue, labels, flags */ }
 interface AppSettings { language, defaultAiDifficulty, defaultGameMode, soundEnabled, hapticsEnabled }
-```
 
-**Phase 2** (game engine):
-
-```ts
-interface PlayerState {
-  id: string;
-  isHuman: boolean;
-  hand: CardId[];
-  collected: CardId[];
-  goCount: number;
-  score: number;
-}
-
-interface GameState {
-  phase: 'dealing' | 'playing' | 'goStopPrompt' | 'finished';
-  mode: GameMode;
-  aiDifficulty: AiDifficulty;
-  players: PlayerState[];  // index 0 = human; rest = AI
-  table: TableCard[];
-  deck: CardId[];
-  currentPlayerIndex: number;
-  targetScore: number;
-  dealerIndex: number;
+interface PlayerState { id, name, isHuman, hand, collected, goCount, score }
+interface TableCard { cardId, stackedCardIds? }
+interface MatgoGameState {
+  phase: 'playing' | 'goStopPrompt' | 'finished';
+  mode, aiDifficulty, players: [PlayerState, PlayerState];
+  table, deck, currentPlayerIndex, targetScore, dealerIndex;
+  pendingAction: PendingAction | null;  // chooseHandMatch | chooseFlipMatch
+  statusMessage, lastFlippedCardId;
 }
 ```
+
+**Phase 2 remaining** (turn engine, Go/Stop, result):
 
 ---
 
@@ -526,10 +538,20 @@ interface GameState {
 
 ### Phase 2 — Core Gameplay (Human vs AI) (current)
 
-- [ ] Deck, shuffle, deal — **맞고 2P** (human + 1 AI)
-- [ ] Table layout + hand fan UI
-- [ ] Turn engine: play → flip → collect (human + AI turns)
-- [ ] **AI opponent** — all 4 difficulty levels (basic heuristics)
+- [x] Deck, shuffle, deal — **맞고 2P** (human + 1 AI)
+  - `createDeck` / `shuffleDeck` (Fisher–Yates, injectable RNG)
+  - `chooseDealer` — draw by seat; highest month + type wins
+  - `dealMatgo2P` — 5 each → 4 table → 5 each → 4 table, from dealer's right
+  - `createMatgoGame` — full setup; 20 cards remain in center deck
+  - `scripts/verify-matgo-deal.ts` — 100-seed invariant check
+- [~] Table layout + hand UI — playable board in `app/game.tsx` (collected pile view, fan layout pending)
+- [x] Turn engine: play → flip → collect (human + AI turns)
+  - `turnEngine.ts` — hand play, deck flip, month matching, collection
+  - Human pending choice when 2+ table matches on hand play (or rare flip choice)
+  - 뻑: flip onto two single same-month cards → 3-card stack
+  - `useMatgoGame` hook — reducer + AI turn `useEffect`
+  - `scripts/verify-turn-engine.ts` — card conservation across simulated play
+- [~] **AI opponent** — basic turn AI (`ai.ts`: match-first, pile preference by difficulty); Go/Stop + full heuristics pending
 - [ ] Pre-play special conditions
 - [ ] Scoring engine (all yaku)
 - [ ] Go/Stop — human modal; AI auto-decision by difficulty
@@ -587,10 +609,11 @@ Most special moves are now documented above (쪽·따닥·폭탄·흔들기·뻑
 
 ## Acceptance Criteria — Phase 2
 
-- [ ] **맞고** full game vs AI playable start to finish
+- [ ] **맞고** full game vs AI playable start to finish (turns work; scoring/Go/Stop/result pending)
 - [ ] All four AI difficulties selectable and behave noticeably different
-- [ ] Correct dealing (10 hand / 8 table) and turn order (human ↔ AI)
-- [ ] Matching, stacking, and collection work for both sides
+- [x] Correct dealing (10 hand / 8 table) and dealer selection (human ↔ AI seats)
+- [x] Turn order and play (human ↔ AI) — dealer first, alternating turns
+- [x] Matching, stacking (뻑), and collection work for both sides
 - [ ] Score matches manual calculation for all yaku
 - [ ] Human Go/Stop modal at target; AI decides Go/Stop without blocking UI
 - [ ] Result screen shows win/loss vs AI
@@ -608,4 +631,4 @@ Most special moves are now documented above (쪽·따닥·폭탄·흔들기·뻑
 
 ## Next Step
 
-**Phase 2** — Human vs AI 맞고: deck + deal, board UI, turn engine, **AI (초보/중급/고급/전문가)**, scoring, Go/Stop, result.
+**Phase 2** — Pre-play specials, **scoring engine**, Go/Stop modal, result screen, board polish (collected piles, fan hand), AI tuning per difficulty.
