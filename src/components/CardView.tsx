@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { getCardBackSource, getCardImageSource } from '../cards/getCardImage';
 import { colors } from '../constants/colors';
 import { CARD_BORDER_RADIUS, CARD_DIMENSIONS } from '../constants/layout';
@@ -9,29 +9,57 @@ interface CardViewProps {
   card: CardDefinition;
   size?: CardSize;
   faceDown?: boolean;
+  onPress?: () => void;
+  selected?: boolean;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function CardView({ card, size = 'table', faceDown = false }: CardViewProps) {
+export function CardView({
+  card,
+  size = 'table',
+  faceDown = false,
+  onPress,
+  selected = false,
+  disabled = false,
+  style,
+}: CardViewProps) {
   const dimensions = CARD_DIMENSIONS[size];
+  const content = faceDown ? (
+    <Image source={getCardBackSource()} style={styles.image} contentFit="contain" transition={200} />
+  ) : (
+    <Image
+      source={getCardImageSource(card)}
+      style={styles.image}
+      contentFit="contain"
+      transition={200}
+      accessibilityLabel={card.labels.ko}
+    />
+  );
 
-  if (faceDown) {
-    return (
-      <View style={[styles.card, dimensions, styles.shadow]}>
-        <Image source={getCardBackSource()} style={styles.image} contentFit="contain" transition={200} />
-      </View>
-    );
+  const cardBody = (
+    <View
+      style={[
+        styles.card,
+        dimensions,
+        styles.shadow,
+        selected && styles.selected,
+        disabled && styles.disabled,
+        style,
+      ]}
+    >
+      {content}
+    </View>
+  );
+
+  if (!onPress) {
+    return cardBody;
   }
 
   return (
-    <View style={[styles.card, dimensions, styles.shadow]}>
-      <Image
-        source={getCardImageSource(card)}
-        style={styles.image}
-        contentFit="contain"
-        transition={200}
-        accessibilityLabel={card.labels.ko}
-      />
-    </View>
+    <Pressable onPress={onPress} disabled={disabled}>
+      {cardBody}
+    </Pressable>
   );
 }
 
@@ -56,5 +84,12 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  selected: {
+    borderColor: colors.gold,
+    borderWidth: 2,
+  },
+  disabled: {
+    opacity: 0.45,
   },
 });
