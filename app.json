@@ -2,7 +2,7 @@
   "expo": {
     "name": "Hwatu",
     "slug": "hwatu",
-    "version": "1.0.0",
+    "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "hwatu",
@@ -23,7 +23,10 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,6 +43,17 @@
           "enableBackgroundRecording": false
         }
       ]
-    ]
+    ],
+    "updates": {
+      "url": "https://u.expo.dev/475bf35e-d433-4087-a6a3-2b90e3ed9271"
+    },
+    "runtimeVersion": "2.0.1",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "475bf35e-d433-4087-a6a3-2b90e3ed9271"
+      }
+    },
+    "owner": "mike008"
   }
 }

@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +24,7 @@ export default function SettingsScreen() {
   const { settings, updateSettings } = useSettings();
   const { t, language } = useTranslation();
   const { previewAtVolume } = useGameSounds();
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -105,7 +107,10 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <Text style={styles.credit}>{t('settings.credit')}</Text>
+        <View style={styles.footer}>
+          <Text style={styles.version}>v{appVersion}</Text>
+          <Text style={styles.credit}>{t('settings.credit')}</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -131,11 +136,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  footer: {
+    marginTop: 8,
+    gap: 0,
+  },
+  version: {
+    color: colors.cream,
+    opacity: 0.7,
+    fontSize: 13,
+    textAlign: 'center',
+  },
   credit: {
     color: colors.cream,
     opacity: 0.55,
     fontSize: 13,
     textAlign: 'center',
-    marginTop: 8,
   },
 });

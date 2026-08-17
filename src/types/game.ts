@@ -33,11 +33,11 @@ export interface GameSetupConfig {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  language: 'en',
+  language: 'ko',
   defaultAiDifficulty: 'intermediate',
   defaultGameMode: 'matgo',
   gameSpeed: 'slow',
   soundEnabled: true,
-  soundVolume: SOUND_VOLUME_MAX,
+  soundVolume: 6,
   hapticsEnabled: true,
 };
