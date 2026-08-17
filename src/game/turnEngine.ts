@@ -148,14 +148,11 @@ function collectFromTable(
   const players = [...state.players];
   players[playerIndex] = collectCards(players[playerIndex], collectedIds);
 
-  let next = appendSound(
-    {
-      ...state,
-      players,
-      table: removeTableCards(state.table, [tableIndex]),
-    },
-    'collect',
-  );
+  let next: MatgoGameState = {
+    ...state,
+    players,
+    table: removeTableCards(state.table, [tableIndex]),
+  };
 
   if (isPukCollect) {
     next = applySpecialMoveReward(next, playerIndex, 'puk');
@@ -181,14 +178,11 @@ function collectFromTableIndices(
   const players = [...state.players];
   players[playerIndex] = collectCards(players[playerIndex], collectedIds);
 
-  let next = appendSound(
-    {
-      ...state,
-      players,
-      table: removeTableCards(state.table, tableIndices),
-    },
-    'collect',
-  );
+  let next: MatgoGameState = {
+    ...state,
+    players,
+    table: removeTableCards(state.table, tableIndices),
+  };
 
   return maybePromptSepCup(next, playerIndex, collectedIds);
 }

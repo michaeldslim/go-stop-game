@@ -10,6 +10,7 @@ import { LayoutAnchor, LayoutAnchorProvider, anchorKeys } from '../src/component
 import { SepCupModal } from '../src/components/SepCupModal';
 import { SpecialMoveBar } from '../src/components/SpecialMoveBar';
 import { TurnAnimationOverlay } from '../src/components/TurnAnimationOverlay';
+import { YakuCalloutOverlay } from '../src/components/YakuCalloutOverlay';
 import {
   getAiDifficultyOption,
   getLocalizedText,
@@ -20,6 +21,14 @@ import { useMatgoGame } from '../src/game/useMatgoGame';
 import { useTranslation } from '../src/i18n/useTranslation';
 import type { AiDifficulty, GameMode } from '../src/types/game';
 import type { PlayerState } from '../src/types/gameState';
+import type { YakuType } from '../src/game/yaku';
+
+const YAKU_LABEL_KEYS: Record<YakuType, 'game.yaku.godori' | 'game.yaku.hongdan' | 'game.yaku.cheongdan' | 'game.yaku.chodan'> = {
+  godori: 'game.yaku.godori',
+  hongdan: 'game.yaku.hongdan',
+  cheongdan: 'game.yaku.cheongdan',
+  chodan: 'game.yaku.chodan',
+};
 
 function parseMode(value: string | string[] | undefined): GameMode {
   if (value === 'gostop' || value === 'hwatu') {
@@ -129,6 +138,8 @@ function GameScreenContent() {
     activeFlight,
     onFlightComplete,
     inFlightCardId,
+    activeYaku,
+    dismissYakuCallout,
   } = useMatgoGame(mode, difficulty, handMultiplier);
 
   const human = game.players.find((player) => player.isHuman) ?? game.players[0];
@@ -319,6 +330,12 @@ function GameScreenContent() {
       />
 
       <TurnAnimationOverlay activeFlight={activeFlight} onFlightComplete={onFlightComplete} />
+
+      <YakuCalloutOverlay
+        yaku={activeYaku}
+        label={activeYaku ? t(YAKU_LABEL_KEYS[activeYaku]) : ''}
+        onComplete={dismissYakuCallout}
+      />
     </SafeAreaView>
   );
 }

@@ -100,6 +100,26 @@ function countByType(
   };
 }
 
+export interface YakuProgress {
+  godori: number;
+  hongdan: number;
+  cheongdan: number;
+  chodan: number;
+}
+
+export function countYakuProgress(
+  collected: CardId[],
+  flexCardRoles: Partial<Record<CardId, SepCupRole>> = {},
+): YakuProgress {
+  const counts = countByType(collected, 0, flexCardRoles);
+  return {
+    godori: counts.godoriCount,
+    hongdan: counts.hongdanCount,
+    cheongdan: counts.cheongdanCount,
+    chodan: counts.chodanCount,
+  };
+}
+
 function scoreBrights(brights: number, hasRain: boolean): number {
   if (brights >= 5) {
     return 15;

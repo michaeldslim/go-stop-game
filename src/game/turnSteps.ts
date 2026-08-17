@@ -197,14 +197,12 @@ export function applyVisualStep(state: MatgoGameState, step: TurnStep): MatgoGam
   }
 }
 
-export function soundForStep(step: TurnStep): 'playCard' | 'flipCard' | 'collect' | null {
+export function soundForStep(step: TurnStep): 'playCard' | 'flipCard' | null {
   switch (step.type) {
     case 'playHand':
       return 'playCard';
     case 'flipDeck':
       return 'flipCard';
-    case 'collect':
-      return 'collect';
     default:
       return null;
   }

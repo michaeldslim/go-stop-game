@@ -33,6 +33,10 @@ export type TranslationKey =
   | 'game.flipped'
   | 'game.target'
   | 'game.yourHand'
+  | 'game.yaku.godori'
+  | 'game.yaku.hongdan'
+  | 'game.yaku.cheongdan'
+  | 'game.yaku.chodan'
   | 'rules.title'
   | 'rules.back'
   | 'rules.credit'
@@ -114,6 +118,10 @@ const en: Record<TranslationKey, string> = {
   'game.flipped': 'Flipped',
   'game.target': 'Target {score} · {mode}',
   'game.yourHand': 'Your Hand',
+  'game.yaku.godori': 'Godori!',
+  'game.yaku.hongdan': 'Hongdan!',
+  'game.yaku.cheongdan': 'Cheongdan!',
+  'game.yaku.chodan': 'Chodan!',
   'rules.title': 'How to Play',
   'rules.back': '← Back',
   'rules.credit': 'Rules based on the 도까함 Go-Stop guide and Instructables.',
@@ -203,6 +211,10 @@ const ko: Record<TranslationKey, string> = {
   'game.flipped': '방금 뒤집음',
   'game.target': '목표 {score}점 · {mode}',
   'game.yourHand': '내 손패',
+  'game.yaku.godori': '고도리!',
+  'game.yaku.hongdan': '홍단!',
+  'game.yaku.cheongdan': '청단!',
+  'game.yaku.chodan': '초단!',
   'rules.title': '게임 방법',
   'rules.back': '← 뒤로',
   'rules.credit': '도까함 고스톱 가이드와 Instructables를 참고했습니다.',

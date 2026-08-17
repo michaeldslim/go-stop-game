@@ -5,7 +5,7 @@ import type { GameSoundEffect } from '../types/gameState';
 const SOUND_ASSETS = {
   playCard: require('../../assets/sounds/card.mp3'),
   flipCard: require('../../assets/sounds/gather-short.mp3'),
-  collect: require('../../assets/sounds/gather-long.mp3'),
+  yaku: require('../../assets/sounds/gather-long.mp3'),
 } as const;
 
 const EFFECT_GAP_MS = 90;
@@ -19,7 +19,7 @@ function delay(ms: number): Promise<void> {
 export function useGameSounds(enabled: boolean) {
   const cardPlayer = useAudioPlayer(SOUND_ASSETS.playCard);
   const flipPlayer = useAudioPlayer(SOUND_ASSETS.flipCard);
-  const collectPlayer = useAudioPlayer(SOUND_ASSETS.collect);
+  const yakuPlayer = useAudioPlayer(SOUND_ASSETS.yaku);
 
   useEffect(() => {
     void setAudioModeAsync({
@@ -35,12 +35,16 @@ export function useGameSounds(enabled: boolean) {
       }
 
       const player =
-        effect === 'playCard' ? cardPlayer : effect === 'flipCard' ? flipPlayer : collectPlayer;
+        effect === 'playCard'
+          ? cardPlayer
+          : effect === 'flipCard'
+            ? flipPlayer
+            : yakuPlayer;
 
       await player.seekTo(0);
       player.play();
     },
-    [enabled, cardPlayer, flipPlayer, collectPlayer],
+    [enabled, cardPlayer, flipPlayer, yakuPlayer],
   );
 
   const playEffects = useCallback(

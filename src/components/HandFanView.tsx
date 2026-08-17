@@ -1,4 +1,5 @@
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { getCardById } from '../cards/getCardById';
 import { LayoutAnchor, anchorKeys } from './LayoutAnchor';
 import { CardView } from './CardView';
@@ -43,6 +44,7 @@ export function HandFanView({
   const { width: cardWidth, height: cardHeight } = CARD_DIMENSIONS[size];
   const rotationSign = fanDirection === 'up' ? 1 : -1;
   const fanPadding = Math.round(cardHeight * 0.15);
+  const [viewportWidth, setViewportWidth] = useState(0);
 
   if (count === 0) {
     return <View style={[styles.empty, { height: cardHeight }, style]} />;
@@ -51,9 +53,11 @@ export function HandFanView({
   const step = cardWidth * FAN_OVERLAP;
   const totalWidth = cardWidth + step * (count - 1);
   const centerIndex = (count - 1) / 2;
+  const containerHeight = cardHeight + fanPadding;
+  const needsScroll = viewportWidth > 0 && totalWidth > viewportWidth;
 
-  return (
-    <View style={[styles.container, { width: totalWidth, height: cardHeight + fanPadding }, style]}>
+  const fan = (
+    <View style={[styles.container, { width: totalWidth, height: containerHeight }]}>
       {cardIds.map((cardId, index) => {
         const card = getCardById(cardId);
         const offset = (index - centerIndex) / Math.max(count - 1, 1);
@@ -92,11 +96,42 @@ export function HandFanView({
       })}
     </View>
   );
+
+  return (
+    <View
+      style={[styles.wrapper, { height: containerHeight }, style]}
+      onLayout={(event) => setViewportWidth(event.nativeEvent.layout.width)}
+    >
+      {needsScroll ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          nestedScrollEnabled
+          contentContainerStyle={styles.scrollContent}
+          style={styles.scroll}
+        >
+          {fan}
+        </ScrollView>
+      ) : (
+        fan
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  scroll: {
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   container: {
-    alignSelf: 'center',
     position: 'relative',
   },
   empty: {

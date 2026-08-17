@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useSettings } from '../settings/SettingsProvider';
+import { useGameSounds } from '../audio/useGameSounds';
 import { createGame } from './createGame';
 import { runAiTurn } from './ai';
 import { declareGo, declareStop } from './goStop';
@@ -21,6 +23,7 @@ import {
 } from './turnEngine';
 import { declareBomb, declareShake, canDeclareBomb, canDeclareShake } from './specialMoves';
 import { buildTurnSteps } from './turnSteps';
+import { detectHumanYakuCompletion, type YakuType } from './yaku';
 import { useTurnAnimation } from './useTurnAnimation';
 import type { AiDifficulty, GameMode } from '../types/game';
 import type { CardId, MatgoGameState, SepCupRole } from '../types/gameState';
@@ -86,6 +89,7 @@ export function useMatgoGame(
 ) {
   const router = useRouter();
   const { settings } = useSettings();
+  const { playEffects } = useGameSounds(settings.soundEnabled);
 
   const initialState = useMemo(
     () => createGame({ mode, aiDifficulty, handMultiplier }),
@@ -93,6 +97,7 @@ export function useMatgoGame(
   );
 
   const [game, dispatch] = useReducer(gameReducer, initialState);
+  const [yakuQueue, setYakuQueue] = useState<YakuType[]>([]);
   const gameRef = useRef(game);
   gameRef.current = game;
 
@@ -115,6 +120,46 @@ export function useMatgoGame(
     setDisplayGame(game);
   }, [game, setDisplayGame]);
 
+  const enqueueYaku = useCallback(
+    (completed: YakuType[]) => {
+      if (completed.length === 0) {
+        return;
+      }
+      if (settings.hapticsEnabled) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      void playEffects(['yaku']);
+      setYakuQueue((queue) => [...queue, ...completed]);
+    },
+    [playEffects, settings.hapticsEnabled],
+  );
+
+  const dismissYakuCallout = useCallback(() => {
+    setYakuQueue((queue) => queue.slice(1));
+  }, []);
+
+  const activeYaku = yakuQueue[0] ?? null;
+
+  const notifyHumanYaku = useCallback(
+    (before: MatgoGameState, after: MatgoGameState) => {
+      const humanIndex = before.players.findIndex((player) => player.isHuman);
+      if (humanIndex < 0) {
+        return;
+      }
+      const beforePlayer = before.players[humanIndex];
+      const afterPlayer = after.players[humanIndex];
+      enqueueYaku(
+        detectHumanYakuCompletion(
+          beforePlayer.collected,
+          afterPlayer.collected,
+          beforePlayer.flexCardRoles,
+          afterPlayer.flexCardRoles,
+        ),
+      );
+    },
+    [enqueueYaku],
+  );
+
   const dispatchAnimated = useCallback(
     async (action: GameReducerAction) => {
       if (
@@ -132,14 +177,16 @@ export function useMatgoGame(
       const after = gameReducer(before, action);
 
       if (!shouldAnimate(before, after)) {
+        notifyHumanYaku(before, after);
         dispatch(action);
         return;
       }
 
       await animateTurn(before, after);
+      notifyHumanYaku(before, after);
       dispatch(action);
     },
-    [animateTurn],
+    [animateTurn, notifyHumanYaku],
   );
 
   useEffect(() => {
@@ -277,5 +324,7 @@ export function useMatgoGame(
     pendingHandCardId,
     highlightedHandCards,
     choosableTableIndices,
+    activeYaku,
+    dismissYakuCallout,
   };
 }
