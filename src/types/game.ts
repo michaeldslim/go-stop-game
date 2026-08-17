@@ -22,6 +22,7 @@ export interface AppSettings {
   defaultAiDifficulty: AiDifficulty;
   defaultGameMode: GameMode;
   gameSpeed: GameSpeed;
+  hintsEnabled: boolean;
   soundEnabled: boolean;
   soundVolume: number;
   hapticsEnabled: boolean;
@@ -37,6 +38,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultAiDifficulty: 'intermediate',
   defaultGameMode: 'matgo',
   gameSpeed: 'slow',
+  hintsEnabled: true,
   soundEnabled: true,
   soundVolume: 6,
   hapticsEnabled: true,

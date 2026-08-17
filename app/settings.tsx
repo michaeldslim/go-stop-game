@@ -81,6 +81,16 @@ export default function SettingsScreen() {
         />
 
         <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{t('settings.gameplay')}</Text>
+          <SettingsToggleRow
+            label={t('settings.hints')}
+            description={t('settings.hintsDesc')}
+            value={settings.hintsEnabled}
+            onValueChange={(value) => updateSettings({ hintsEnabled: value })}
+          />
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t('settings.feedback')}</Text>
           <SettingsToggleRow
             label={t('settings.sound')}

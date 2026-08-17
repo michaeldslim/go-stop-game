@@ -1,6 +1,6 @@
 ---
 name: Hwatu Mobile App
-overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약 콜아웃·gather-long·손패 가로 스크롤·보드 세로 스크롤(3P)·애니 앵커 remeasure·collect sourceTableIndex·AI 손패 mini·턴 페이싱(수집 전 0.5s·AI 1.2s)·playHand 타겟 슬롯 수정·특수기술 모달. Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드는 미구현(optional).
+overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약 콜아웃·gather-long·손패 가로 스크롤·보드 세로 스크롤(3P)·애니 앵커 remeasure·collect sourceTableIndex·AI 손패 mini·턴 페이싱(수집 전 0.5s·AI 1.2s)·playHand 타겟 슬롯 수정·특수기술 모달. Post-Phase 4 — 턴 힌트(설정 토글·시안 글로우·점수+약 진행 휴리스틱). Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드는 미구현(optional).
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩, 앱 아이콘, 기본 폴더 구조
@@ -50,6 +50,9 @@ todos:
   - id: advanced-rules
     content: 고급 규칙 — 쪽·따닥·폭탄·흔들기·정산·고스톱 3P·화투 심플 (Phase 4)
     status: completed
+  - id: turn-hints
+    content: 턴 힌트 — 설정 토글, 손패/바닥 시안 글로우, 점수 시뮬+약 진행 휴리스틱 (hint.ts)
+    status: completed
   - id: release
     content: EAS 빌드, Android/iOS 스토어 배포
     status: pending
@@ -95,7 +98,7 @@ Rules references:
 | Audio | `expo-audio` | `card.mp3` play · `gather-short.mp3` flip · `gather-long.mp3` yaku complete |
 | Haptics | `expo-haptics` | collect step, yaku complete (success), Go declaration |
 | State | Zustand or reducer | Game engine isolated from UI |
-| Settings | AsyncStorage | language, **AI difficulty**, sound, haptics, default game mode |
+| Settings | AsyncStorage | language, **AI difficulty**, sound, haptics, game speed, **turn hints**, default game mode |
 | i18n | Custom provider or i18next | `en` / `ko` |
 
 ---
@@ -227,13 +230,14 @@ src/
     goStop.ts              # Go/Stop prompt, AI policy, hand-end scoring
     turnSteps.ts           # TurnStep types + buildTurnSteps + applyVisualStep + STEP_TIMING + AI_TURN_DELAY_MS
     useTurnAnimation.ts    # animation queue, displayGame, per-step sound/haptics
-    ai.ts                  # runAiTurn — difficulty-tuned match + Go/Stop heuristics
-    useMatgoGame.ts        # reducer + AI turn + yaku queue + turn animations + result nav
+    hint.ts                # getTurnHint — score-delta + partial yaku progress evaluation
+    ai.ts                  # runAiTurn — shares getBestHandCard/getBestTableIndex with hint.ts
+    useMatgoGame.ts        # reducer + AI turn + yaku queue + turnHint + turn animations + result nav
     gameUtils.ts           # cloneGameState, turn helpers
   components/
-    CardView.tsx           # expo-image card renderer
+    CardView.tsx           # expo-image card renderer; `hinted` cyan glow + pulse (Reanimated)
     CollectedPileView.tsx  # captured pile — 70/30 split, 광·띠·열끗 cascade + 피 grid
-    HandFanView.tsx        # fan arc + horizontal scroll when hand wider than viewport
+    HandFanView.tsx        # fan arc + horizontal scroll; `hintedCardIds` for turn hint glow
     YakuCalloutOverlay.tsx # full-screen yaku celebration (backdrop, banner, per-yaku accent)
     FlyingCard.tsx         # Reanimated flying card overlay
     TurnAnimationOverlay.tsx
@@ -255,12 +259,12 @@ src/
     useTranslation.ts      # t() hook from settings language
   types/
     hwatu.ts               # CardDefinition, Month, CardType
-    game.ts                # AiDifficulty, GameMode ('matgo' | 'gostop' | 'hwatu'), AppSettings
+    game.ts                # AiDifficulty, GameMode, AppSettings (+ hintsEnabled, gameSpeed)
     gameState.ts           # MatgoGameState, PlayerState, TableCard, PendingAction
 app/
   index.tsx                # Home — Play uses Settings defaults → /game
-  settings.tsx             # Settings (game mode, AI difficulty, language, sound, haptics)
-  game.tsx                 # Playable matgo — deal, turns, scoring, Go/Stop, fan hand
+  settings.tsx             # Settings (game mode, AI difficulty, language, hints, sound, haptics)
+  game.tsx                 # Playable matgo — deal, turns, scoring, Go/Stop, turn hints, fan hand
   result.tsx               # Win/loss vs AI, score breakdown, play again
   rules.tsx                # Localized rules (EN/KO, 7 sections — no external credit footer)
 ```
@@ -301,11 +305,30 @@ Selectable in **Settings** (default game mode + AI difficulty). Persist with Asy
 | `advanced` | 고급 | Advanced | Optimizes yaku & pi; better match choice (싼 것 avoidance); strategic Go |
 | `expert` | 전문가 | Expert | Strong lookahead; maximizes score & penalties; optimal Go/Stop; declares 흔들기/폭탄 when available |
 
-Implementation: `src/game/ai.ts` + `AiDifficulty` type. Each level tunes weights / search depth / mistake rate — not separate codebases.
+Implementation: `src/game/ai.ts` + `AiDifficulty` type. Each level tunes weights / search depth / mistake rate — not separate codebases. **Hand/table match heuristics** for intermediate+ and expert are shared with turn hints via `src/game/hint.ts` (`getBestHandCard`, `getBestTableIndex`).
 
 ```ts
 type AiDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 ```
+
+### Turn hints (human assist) ✅
+
+Optional **턴 힌트** — Settings → Gameplay → **Turn Hints** (`hintsEnabled`, default **on**, AsyncStorage).
+
+| Piece | Role |
+|-------|------|
+| `hint.ts` | `getTurnHint` — evaluates each legal hand play + table choice |
+| `useMatgoGame` | Computes `turnHint` when `hintsEnabled` && human turn && `!isAnimating` |
+| `HandFanView` / `CardView` | `hintedCardIds` / `hinted` — cyan (`#5CEFFF`) border + Reanimated pulse |
+| `game.tsx` | Highlights suggested hand card and table slot (no text banner) |
+
+**Hint evaluation (v2 — score + yaku progress):**
+
+1. **Score delta** — simulate cards collected from hand play (not deck flip); `syncPlayerScore` before/after; includes bonus pi from 따닥·뻑·싼 것 when applicable
+2. **Partial yaku bonus** — `countYakuProgress` weights incomplete godori·홍단·청단·초단 (completion already in score delta — no double count)
+3. **Dump (no match)** — prefer lowest-type discard; penalize throwing yaku-relevant cards still needed for incomplete yaku
+
+**Limitations (not in hint):** deck flip probability, opponent blocking, Go/Stop timing, 흔들기/폭탄 advice. Practical level ≈ **중급~중상급** assist, not pro-level lookahead.
 
 ---
 
@@ -484,7 +507,10 @@ No Go/Stop — play until cards exhausted. Per-card scoring (`calculateHwatuSimp
 
 - **Game mode**: 맞고 (vs 1 AI) · 고스톱 (vs 2 AI) · 화투 심플 (vs 1 AI, no Go/Stop)
 - **AI difficulty**: 초보 · 중급 · 고급 · 전문가 (`OptionPicker`)
-- Language, sound volume, haptics toggles
+- **Game speed**: slow · medium · fast (`OptionPicker`)
+- **Gameplay** section — **Turn Hints** toggle (`settings.hints` / `settings.hintsDesc`, EN/KO)
+- **Feedback** section — sound volume slider, haptics toggle
+- Language picker
 - Localized back label (`common.back` — EN/KO)
 - Card art attribution credit (Wikimedia CC BY-SA)
 
@@ -494,7 +520,7 @@ No Go/Stop — play until cards exhausted. Per-card scoring (`calculateHwatuSimp
 
 ### Game Screen (portrait) — 맞고 2P / 고스톱 3P ✅
 
-Fixed **top bar** (leave + optional **특수/Special** button when 흔들기/폭탄 available + turn hint). Everything below scrolls vertically in one `ScrollView` (`boardScroll`) — needed for 3P (two AI rows + piles + table + human pile + hand). Scroll disabled while `isAnimating`; `remeasureAll()` on scroll end keeps flight anchors accurate.
+Fixed **top bar** (leave + optional **특수/Special** button when 흔들기/폭탄 available + turn status text). Everything below scrolls vertically in one `ScrollView` (`boardScroll`) — needed for 3P (two AI rows + piles + table + human pile + hand). Scroll disabled while `isAnimating`; `remeasureAll()` on scroll end keeps flight anchors accurate.
 
 ```
 ┌─────────────────────────────┐
@@ -545,6 +571,7 @@ Fixed **top bar** (leave + optional **특수/Special** button when 흔들기/폭
 - **Special moves (Phase 4)** — `SpecialMoveModal` (흔들기/폭탄); header **특수** button; auto-opens **1.5s** after hand ready on first human turn with available moves; engine awards bonus pi for 쪽·따닥·싹쓸이·뻑·싼 것
 - **September cup** — `SepCupModal` on collecting `sep-animal-double`
 - **Settlement** — `settlement.ts`; result screen shows chips, 고박·피박·광박, nagari 2× next hand
+- **Turn hints** — when `hintsEnabled` and human turn: recommended hand card + table slot glow cyan (`colors.hint`); hidden during animation and when hints off
 
 ### Go/Stop Modal
 
@@ -714,7 +741,7 @@ type YakuType = 'godori' | 'hongdan' | 'cheongdan' | 'chodan';
 type CardSize = 'hand' | 'table' | 'small' | 'pile' | 'mini';
 
 interface CardDefinition { /* id, month, type, piValue, labels, flags */ }
-interface AppSettings { language, defaultAiDifficulty, defaultGameMode, soundEnabled, hapticsEnabled }
+interface AppSettings { language, defaultAiDifficulty, defaultGameMode, gameSpeed, hintsEnabled, soundEnabled, soundVolume, hapticsEnabled }
 
 interface PlayerState {
   id, name, isHuman, hand, collected, goCount, score, scoreAtLastGo;
@@ -732,7 +759,7 @@ interface MatgoGameState {
 }
 ```
 
-**Phase 4 complete** — 3P gostop, hwatu simple, advanced rules, settlement, sep cup choice. **Post-Phase 4 polish** — yaku callout, gather-long on yaku, hand horizontal scroll, unified board vertical scroll (3P), `LayoutAnchor.remeasureAll`, collect `sourceTableIndex`, AI `mini` hand cards, turn pacing (`pauseBeforeCollect`, `AI_TURN_DELAY_MS`), play-hand target slot fix, special-move modal, home subtitle, settings-as-setup, 2P human-always-dealer.
+**Phase 4 complete** — 3P gostop, hwatu simple, advanced rules, settlement, sep cup choice. **Post-Phase 4 polish** — yaku callout, gather-long on yaku, hand horizontal scroll, unified board vertical scroll (3P), `LayoutAnchor.remeasureAll`, collect `sourceTableIndex`, AI `mini` hand cards, turn pacing (`pauseBeforeCollect`, `AI_TURN_DELAY_MS`), play-hand target slot fix, special-move modal, home subtitle, settings-as-setup, 2P human-always-dealer, **turn hints** (score + yaku progress heuristic, settings toggle, cyan card glow).
 
 ---
 
@@ -812,6 +839,14 @@ interface MatgoGameState {
 - [x] **나가리** — void hand; `handMultiplier` doubles on play again from result
 - [ ] **Bonus/joker cards** (Korean deck extras — no card art in catalog; standard 48-card deck only)
 
+### Post-Phase 4 — Turn hints ✅
+
+- [x] `src/game/hint.ts` — `getTurnHint`, `getBestHandCard`, `getBestTableIndex`
+- [x] Score-delta evaluation (`syncPlayerScore`) + partial yaku progress weighting
+- [x] Settings `hintsEnabled` toggle (Gameplay section); default on
+- [x] Cyan card glow (`colors.hint`) on suggested hand card and table slot; Reanimated pulse
+- [x] `ai.ts` refactored to share hint helpers for intermediate+ / expert match choice
+
 ### Phase 5 — Release
 
 - [ ] EAS Build (Android → iOS)
@@ -825,7 +860,7 @@ interface MatgoGameState {
 
 | Element | Direction |
 |---------|-----------|
-| **Palette** | Gold `#C9A227`, cream `#F5E6C8`, dark green felt `#1B4D3E`; deep red `#8B1A1A` reserved (legacy icon/splash, not primary UI) |
+| **Palette** | Gold `#C9A227`, cream `#F5E6C8`, dark green felt `#1B4D3E`, hint cyan `#5CEFFF`; deep red `#8B1A1A` reserved (legacy icon/splash, not primary UI) |
 | **Primary CTA** | Gold fill + felt text — Play, Start buttons; settings toggle on-state |
 | **Secondary CTA** | Gold outline + gold text — How to Play, Settings, section accents |
 | **Typography** | System sans for UI; card art carries Korean/Chinese characters |
@@ -912,8 +947,20 @@ interface MatgoGameState {
 - [x] AI opponent hands render as compact `mini` face-down fan; in-flight cards hidden via `hiddenCardIds`
 - [x] Deck pile anchor lives in table section header (not a separate bottom row)
 
+## Acceptance Criteria — Turn hints ✅
+
+- [x] Settings → Gameplay → **Turn Hints** toggle (`hintsEnabled`); persists in AsyncStorage; default on
+- [x] Human turn: recommended hand card shows cyan glow + pulse on `HandFanView`
+- [x] Pending table choice (hand match or flip match): recommended table slot glows cyan on `CardView`
+- [x] Hints hidden during `isAnimating`, AI turn, Go/Stop prompt, and when toggle off
+- [x] `hint.ts` evaluates score delta via `syncPlayerScore` + partial yaku progress bonus
+- [x] Bonus pi from 따닥·뻑·싼 것 included in hand-play simulation
+- [x] No-match plays prefer low-value discard; yaku-relevant cards penalized when dumping
+- [x] `ai.ts` intermediate+ hand pick and expert table pick share `hint.ts` helpers
+- [x] EN/KO strings for hints setting (`settings.hints`, `settings.hintsDesc`, `settings.gameplay`)
+
 ---
 
 ## Next Step
 
-**Phase 5 — Release** — EAS Build (Android → iOS), Play Store / App Store listing. Optional polish: deal animation, bonus/joker card art + engine support. Post-Phase 4 UX polish (yaku callout, hand scroll, board scroll, animation anchor sync, AI mini hands, turn pacing, play-hand targeting, special-move modal, home/settings/rules UX) is **done**.
+**Phase 5 — Release** — EAS Build (Android → iOS), Play Store / App Store listing. Optional polish: deal animation, bonus/joker card art + engine support, hint v3 (deck-flip probability / opponent blocking). Post-Phase 4 UX polish (yaku callout, hand scroll, board scroll, animation anchor sync, AI mini hands, turn pacing, play-hand targeting, special-move modal, home/settings/rules UX, **turn hints**) is **done**.

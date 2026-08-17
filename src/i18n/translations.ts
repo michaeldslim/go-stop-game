@@ -18,6 +18,9 @@ export type TranslationKey =
   | 'settings.haptics'
   | 'settings.hapticsDesc'
   | 'settings.gameSpeed'
+  | 'settings.gameplay'
+  | 'settings.hints'
+  | 'settings.hintsDesc'
   | 'settings.credit'
   | 'game.leave'
   | 'game.yourTurn'
@@ -106,6 +109,9 @@ const en: Record<TranslationKey, string> = {
   'settings.haptics': 'Haptics',
   'settings.hapticsDesc': 'Vibration on match and Go',
   'settings.gameSpeed': 'Game Speed',
+  'settings.gameplay': 'Gameplay',
+  'settings.hints': 'Turn Hints',
+  'settings.hintsDesc': 'Highlight the best card to play on your turn',
   'settings.credit': 'Card art: Wikimedia Commons (CC BY-SA 4.0)',
   'game.leave': '← Leave',
   'game.yourTurn': 'Your turn',
@@ -202,6 +208,9 @@ const ko: Record<TranslationKey, string> = {
   'settings.haptics': '햅틱',
   'settings.hapticsDesc': '매칭 및 고 선언 시 진동',
   'settings.gameSpeed': '게임 속도',
+  'settings.gameplay': '게임플레이',
+  'settings.hints': '턴 힌트',
+  'settings.hintsDesc': '플레이어 차례에 추천 패를 표시합니다',
   'settings.credit': '카드 아트: Wikimedia Commons (CC BY-SA 4.0)',
   'game.leave': '← 나가기',
   'game.yourTurn': '플레이어 차례',

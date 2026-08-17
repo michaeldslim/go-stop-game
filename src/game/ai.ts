@@ -2,6 +2,7 @@ import type { MatgoGameState, PlayerIndex } from '../types/gameState';
 import { getCardById } from '../cards/getCardById';
 import { calculateScore } from './scoring';
 import { findTableMatchIndices } from './tableCards';
+import { getBestHandCard, getBestTableIndex } from './hint';
 import {
   canDeclareBomb,
   canDeclareShake,
@@ -9,13 +10,6 @@ import {
   declareShake,
 } from './specialMoves';
 import { chooseTableForPending, playBomb, playHandCard } from './turnEngine';
-
-const TYPE_PRIORITY: Record<string, number> = {
-  bright: 4,
-  animal: 3,
-  ribbon: 2,
-  junk: 1,
-};
 
 function pickHandCard(state: MatgoGameState): string {
   const hand = state.players[state.currentPlayerIndex].hand;
@@ -37,26 +31,23 @@ function pickHandCard(state: MatgoGameState): string {
     return matchers[0];
   }
 
-  const scored = matchers.map((cardId) => {
-    const card = getCardById(cardId);
-    const month = card.month;
-    const matchCount = findTableMatchIndices(state.table, month).length;
-    const typeWeight = TYPE_PRIORITY[card.type] ?? 0;
-    const matchBonus = matchCount === 1 ? 2 : 0;
-    return { cardId, weight: typeWeight + matchBonus };
-  });
-
-  scored.sort((left, right) => right.weight - left.weight);
+  const best = getBestHandCard(state);
+  if (!best) {
+    return hand[0];
+  }
 
   if (difficulty === 'intermediate') {
-    return scored[0].cardId;
+    return best;
   }
 
-  if (difficulty === 'advanced' && scored.length > 1 && Math.random() < 0.2) {
-    return scored[1].cardId;
+  if (difficulty === 'advanced' && matchers.length > 1 && Math.random() < 0.2) {
+    const alternate = matchers.find((cardId) => cardId !== best);
+    if (alternate) {
+      return alternate;
+    }
   }
 
-  return scored[0].cardId;
+  return best;
 }
 
 function pickTableIndex(state: MatgoGameState, matchIndices: number[]): number {
@@ -74,24 +65,16 @@ function pickTableIndex(state: MatgoGameState, matchIndices: number[]): number {
     return matchIndices[0];
   }
 
-  const sorted = [...matchIndices].sort((left, right) => {
-    const leftCard = getCardById(state.table[left].cardId);
-    const rightCard = getCardById(state.table[right].cardId);
-    const leftType = TYPE_PRIORITY[leftCard.type] ?? 0;
-    const rightType = TYPE_PRIORITY[rightCard.type] ?? 0;
-    if (leftType !== rightType) {
-      return leftType - rightType;
-    }
-
-    const leftSize = state.table[left].stackedCardIds?.length ?? 0;
-    const rightSize = state.table[right].stackedCardIds?.length ?? 0;
-    return leftSize - rightSize;
-  });
-
-  if (difficulty === 'expert') {
-    return sorted[sorted.length - 1];
+  const best = getBestTableIndex(state, matchIndices);
+  if (best === null) {
+    return matchIndices[0];
   }
 
+  if (difficulty === 'expert') {
+    return best;
+  }
+
+  const sorted = [...matchIndices].sort((left, right) => left - right);
   return sorted[0];
 }
 

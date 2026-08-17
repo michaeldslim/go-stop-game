@@ -2,6 +2,7 @@ export const colors = {
   felt: '#1B4D3E',
   red: '#8B1A1A',
   gold: '#C9A227',
+  hint: '#5CEFFF',
   cream: '#F5E6C8',
   cardBorder: '#2A1810',
   monthColors: [

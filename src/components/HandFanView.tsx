@@ -13,6 +13,7 @@ interface HandFanViewProps {
   playableCardIds?: Set<CardId>;
   hiddenCardIds?: Set<CardId>;
   highlightedCardIds?: Set<CardId>;
+  hintedCardIds?: Set<CardId>;
   onCardPress?: (cardId: CardId) => void;
   selected?: boolean;
   disabled?: boolean;
@@ -32,6 +33,7 @@ export function HandFanView({
   playableCardIds,
   hiddenCardIds,
   highlightedCardIds,
+  hintedCardIds,
   onCardPress,
   selected = false,
   disabled = false,
@@ -66,6 +68,7 @@ export function HandFanView({
         const isPlayable = playable && !disabled;
         const hidden = hiddenCardIds?.has(cardId) ?? false;
         const highlighted = highlightedCardIds?.has(cardId) ?? false;
+        const hinted = hintedCardIds?.has(cardId) ?? false;
 
         return (
           <LayoutAnchor
@@ -77,7 +80,7 @@ export function HandFanView({
               {
                 left: index * step,
                 transform: [{ rotate: `${rotation}deg` }],
-                zIndex: highlighted ? count + 1 : index,
+                zIndex: hinted ? count + 2 : highlighted ? count + 1 : index,
                 opacity: hidden ? 0 : 1,
               },
             ]}
@@ -89,7 +92,8 @@ export function HandFanView({
               onPress={onCardPress ? () => onCardPress(cardId) : undefined}
               disabled={!isPlayable}
               selected={(selected && isPlayable) || highlighted}
-              style={highlighted ? styles.highlightedCard : disabled && !highlighted ? styles.dimmedCard : undefined}
+              hinted={hinted && isPlayable}
+              style={highlighted ? styles.highlightedCard : disabled && !highlighted && !hinted ? styles.dimmedCard : undefined}
             />
           </LayoutAnchor>
         );

@@ -23,6 +23,7 @@ import {
 } from './turnEngine';
 import { declareBomb, declareShake, canDeclareBomb, canDeclareShake } from './specialMoves';
 import { getGameSpeedTimings } from './gameSpeed';
+import { getTurnHint } from './hint';
 import { buildTurnSteps } from './turnSteps';
 import { detectHumanYakuCompletion, type YakuType } from './yaku';
 import { useTurnAnimation } from './useTurnAnimation';
@@ -289,6 +290,13 @@ export function useMatgoGame(
   const highlightedHandCards = pendingHandCardId ? new Set([pendingHandCardId]) : undefined;
   const choosableTableIndices = new Set(pendingTableChoice?.matchIndices ?? []);
 
+  const turnHint = useMemo(() => {
+    if (!settings.hintsEnabled || !isHumanTurn(boardGame) || isAnimating) {
+      return null;
+    }
+    return getTurnHint(boardGame);
+  }, [boardGame, isAnimating, settings.hintsEnabled]);
+
   const canShake =
     isHumanTurn(boardGame) &&
     !isAnimating &&
@@ -351,5 +359,6 @@ export function useMatgoGame(
     activeYaku,
     dismissYakuCallout,
     specialMoveFirstPromptMs: stepTiming.specialMoveFirstPromptMs,
+    turnHint,
   };
 }

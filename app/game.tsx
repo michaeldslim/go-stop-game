@@ -147,6 +147,7 @@ function GameScreenContent() {
     activeYaku,
     dismissYakuCallout,
     specialMoveFirstPromptMs,
+    turnHint,
   } = useMatgoGame(mode, difficulty, handMultiplier);
 
   const [showSpecialMoveModal, setShowSpecialMoveModal] = useState(false);
@@ -159,6 +160,9 @@ function GameScreenContent() {
   const opponents = game.players.filter((player) => !player.isHuman);
   const playableSet = new Set(playableHandCardIds);
   const hiddenCards = inFlightCardId ? new Set([inFlightCardId]) : undefined;
+  const hintedHandCards =
+    turnHint?.handCardId && !needsTableChoice ? new Set([turnHint.handCardId]) : undefined;
+  const hintedTableIndex = turnHint?.tableIndex ?? null;
   const difficultyLabel = getLocalizedText(language, difficultyOption.labels);
   const hasSpecialMoves = canShake || canBomb;
   const bombDeclared =
@@ -337,6 +341,7 @@ function GameScreenContent() {
               const card = getCardById(tableCard.cardId);
               const stackSize = expandTableCard(tableCard).length;
               const choosable = choosableTableIndices.has(index);
+              const hinted = hintedTableIndex === index;
               const hidden = hiddenCards?.has(tableCard.cardId);
 
               return (
@@ -350,6 +355,7 @@ function GameScreenContent() {
                     size="table"
                     onPress={choosable ? () => chooseTable(index) : undefined}
                     choosable={choosable}
+                    hinted={hinted}
                     style={hidden ? styles.hidden : undefined}
                   />
                   {stackSize > 1 ? (
@@ -394,6 +400,7 @@ function GameScreenContent() {
             playableCardIds={playableSet}
             hiddenCardIds={hiddenCards}
             highlightedCardIds={highlightedHandCards}
+            hintedCardIds={hintedHandCards}
             onCardPress={playCard}
             selected={isHumanTurn && !needsTableChoice}
             disabled={!isHumanTurn || needsTableChoice || game.phase !== 'playing' || isAnimating}
