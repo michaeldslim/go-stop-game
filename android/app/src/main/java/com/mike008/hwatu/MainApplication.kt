@@ -1,4 +1,4 @@
-package com.hwatu.game
+package com.mike008.hwatu
 
 import android.app.Application
 import android.content.res.Configuration

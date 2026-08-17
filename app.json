@@ -14,10 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hwatu.game"
+      "bundleIdentifier": "com.mike008.hwatu"
     },
     "android": {
-      "package": "com.hwatu.game",
+      "package": "com.mike008.hwatu",
       "adaptiveIcon": {
         "backgroundColor": "#8B1A1A",
         "foregroundImage": "./assets/android-icon-foreground.png",

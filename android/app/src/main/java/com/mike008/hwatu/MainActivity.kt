@@ -1,4 +1,4 @@
-package com.hwatu.game
+package com.mike008.hwatu
 
 import android.os.Build
 import android.os.Bundle
