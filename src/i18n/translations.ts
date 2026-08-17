@@ -17,6 +17,7 @@ export type TranslationKey =
   | 'settings.soundVolume'
   | 'settings.haptics'
   | 'settings.hapticsDesc'
+  | 'settings.gameSpeed'
   | 'settings.credit'
   | 'game.leave'
   | 'game.yourTurn'
@@ -104,6 +105,7 @@ const en: Record<TranslationKey, string> = {
   'settings.soundVolume': 'Volume',
   'settings.haptics': 'Haptics',
   'settings.hapticsDesc': 'Vibration on match and Go',
+  'settings.gameSpeed': 'Game Speed',
   'settings.credit': 'Card art: Wikimedia Commons (CC BY-SA 4.0)',
   'game.leave': '← Leave',
   'game.yourTurn': 'Your turn',
@@ -199,6 +201,7 @@ const ko: Record<TranslationKey, string> = {
   'settings.soundVolume': '볼륨',
   'settings.haptics': '햅틱',
   'settings.hapticsDesc': '매칭 및 고 선언 시 진동',
+  'settings.gameSpeed': '게임 속도',
   'settings.credit': '카드 아트: Wikimedia Commons (CC BY-SA 4.0)',
   'game.leave': '← 나가기',
   'game.yourTurn': '플레이어 차례',

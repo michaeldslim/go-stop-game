@@ -1,4 +1,6 @@
 import type { CardId, MatgoGameState, TableCard } from '../types/gameState';
+import type { GameSpeedTimings } from './gameSpeed';
+import { getGameSpeedTimings } from './gameSpeed';
 import { addTableCard, expandTableCard, findTableMatchIndices, getCardMonth } from './tableCards';
 import { cloneGameState } from './gameUtils';
 
@@ -8,18 +10,6 @@ export type TurnStep =
   | { type: 'flipDeck'; cardId: CardId; targetTableIndex: number }
   | { type: 'stack'; flippedCardId: CardId; targetTableIndex: number }
   | { type: 'pause'; durationMs: number };
-
-export const STEP_TIMING = {
-  playHand: 250,
-  flipDeck: 300,
-  collect: 350,
-  stack: 200,
-  pauseAfterPlay: 200,
-  pauseBeforeCollect: 500,
-  stagger: 50,
-} as const;
-
-export const AI_TURN_DELAY_MS = 1200;
 
 function findRemovedFromHand(beforeHand: CardId[], afterHand: CardId[]): CardId | null {
   for (const cardId of beforeHand) {
@@ -190,7 +180,11 @@ function resolveFlipDeckTargetIndex(
  * Derive animation steps from committed before/after game states.
  * Returns empty when waiting for human table choice mid-turn.
  */
-export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): TurnStep[] {
+export function buildTurnSteps(
+  before: MatgoGameState,
+  after: MatgoGameState,
+  timing: GameSpeedTimings = getGameSpeedTimings('slow'),
+): TurnStep[] {
   if (
     after.pendingAction &&
     !before.pendingAction &&
@@ -231,7 +225,7 @@ export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): T
   });
 
   if (handCollect.length > 0) {
-    steps.push({ type: 'pause', durationMs: STEP_TIMING.pauseBeforeCollect });
+    steps.push({ type: 'pause', durationMs: timing.pauseBeforeCollect });
     steps.push({
       type: 'collect',
       cardIds: handCollect,
@@ -239,7 +233,7 @@ export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): T
       sourceTableIndex: handPlayTargetIndex,
     });
   } else {
-    steps.push({ type: 'pause', durationMs: STEP_TIMING.pauseAfterPlay });
+    steps.push({ type: 'pause', durationMs: timing.pauseAfterPlay });
   }
 
   if (flippedCard) {
@@ -257,7 +251,7 @@ export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): T
     });
 
     if (flipCollect.length > 0) {
-      steps.push({ type: 'pause', durationMs: STEP_TIMING.pauseBeforeCollect });
+      steps.push({ type: 'pause', durationMs: timing.pauseBeforeCollect });
       steps.push({
         type: 'collect',
         cardIds: flipCollect,

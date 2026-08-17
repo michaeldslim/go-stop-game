@@ -146,6 +146,7 @@ function GameScreenContent() {
     inFlightCardId,
     activeYaku,
     dismissYakuCallout,
+    specialMoveFirstPromptMs,
   } = useMatgoGame(mode, difficulty, handMultiplier);
 
   const [showSpecialMoveModal, setShowSpecialMoveModal] = useState(false);
@@ -184,7 +185,7 @@ function GameScreenContent() {
       return;
     }
 
-    const delayMs = isFirstSpecialMovePromptRef.current ? 1500 : 0;
+    const delayMs = isFirstSpecialMovePromptRef.current ? specialMoveFirstPromptMs : 0;
 
     specialMoveTimerRef.current = setTimeout(() => {
       isFirstSpecialMovePromptRef.current = false;
@@ -199,7 +200,7 @@ function GameScreenContent() {
         specialMoveTimerRef.current = null;
       }
     };
-  }, [isHumanTurn, hasSpecialMoves, canShake, canBomb, human.hand.length, isAnimating]);
+  }, [isHumanTurn, hasSpecialMoves, canShake, canBomb, human.hand.length, isAnimating, specialMoveFirstPromptMs]);
 
   const closeSpecialMoveModal = () => {
     specialMoveDismissedRef.current = true;

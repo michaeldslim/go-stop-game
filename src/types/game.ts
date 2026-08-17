@@ -1,6 +1,7 @@
 export type AiDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 export type GameMode = 'matgo' | 'gostop' | 'hwatu';
 export type AppLanguage = 'en' | 'ko';
+export type GameSpeed = 'slow' | 'medium' | 'fast';
 
 export const SOUND_VOLUME_MIN = 1;
 export const SOUND_VOLUME_MAX = 10;
@@ -20,6 +21,7 @@ export interface AppSettings {
   language: AppLanguage;
   defaultAiDifficulty: AiDifficulty;
   defaultGameMode: GameMode;
+  gameSpeed: GameSpeed;
   soundEnabled: boolean;
   soundVolume: number;
   hapticsEnabled: boolean;
@@ -34,6 +36,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   defaultAiDifficulty: 'intermediate',
   defaultGameMode: 'matgo',
+  gameSpeed: 'slow',
   soundEnabled: true,
   soundVolume: SOUND_VOLUME_MAX,
   hapticsEnabled: true,

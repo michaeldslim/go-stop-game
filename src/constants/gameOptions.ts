@@ -1,4 +1,4 @@
-import type { AiDifficulty, AppLanguage, GameMode } from '../types/game';
+import type { AiDifficulty, AppLanguage, GameMode, GameSpeed } from '../types/game';
 
 export interface LocalizedLabel {
   en: string;
@@ -23,6 +23,39 @@ export interface LanguageOption {
   value: AppLanguage;
   labels: LocalizedLabel;
 }
+
+export interface GameSpeedOption {
+  value: GameSpeed;
+  labels: LocalizedLabel;
+  description: LocalizedLabel;
+}
+
+export const GAME_SPEED_OPTIONS: GameSpeedOption[] = [
+  {
+    value: 'slow',
+    labels: { en: 'Slow', ko: '느림' },
+    description: {
+      en: 'More time to follow each move',
+      ko: '한 수씩 여유 있게',
+    },
+  },
+  {
+    value: 'medium',
+    labels: { en: 'Medium', ko: '보통' },
+    description: {
+      en: 'Balanced pace',
+      ko: '적당한 속도',
+    },
+  },
+  {
+    value: 'fast',
+    labels: { en: 'Fast', ko: '빠름' },
+    description: {
+      en: 'Snappy animations',
+      ko: '빠른 진행',
+    },
+  },
+];
 
 export const AI_DIFFICULTY_OPTIONS: AiDifficultyOption[] = [
   {

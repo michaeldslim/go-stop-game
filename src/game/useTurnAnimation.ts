@@ -6,14 +6,15 @@ import { anchorKeys, useLayoutAnchors, type AnchorPoint } from '../components/La
 import {
   applyVisualStep,
   buildTurnSteps,
-  STEP_TIMING,
   type TurnStep,
 } from './turnSteps';
+import type { GameSpeedTimings } from './gameSpeed';
 
 interface ActiveFlight extends ActiveFlightState {}
 
 interface UseTurnAnimationOptions {
   hapticsEnabled: boolean;
+  stepTiming: GameSpeedTimings;
 }
 
 function delay(ms: number): Promise<void> {
@@ -36,6 +37,7 @@ function waitForNextFrame(): Promise<void> {
 
 export function useTurnAnimation({
   hapticsEnabled,
+  stepTiming,
 }: UseTurnAnimationOptions) {
   const { get, remeasureAll } = useLayoutAnchors();
   const [displayGame, setDisplayGame] = useState<MatgoGameState | null>(null);
@@ -72,7 +74,7 @@ export function useTurnAnimation({
             size: 'hand',
             faceDown: step.playerIndex !== 0,
             flipOnArrival: false,
-            durationMs: STEP_TIMING.playHand,
+            durationMs: stepTiming.playHand,
           };
         }
         case 'flipDeck': {
@@ -84,7 +86,7 @@ export function useTurnAnimation({
             size: 'small',
             faceDown: true,
             flipOnArrival: true,
-            durationMs: STEP_TIMING.flipDeck,
+            durationMs: stepTiming.flipDeck,
           };
         }
         case 'collect': {
@@ -110,7 +112,7 @@ export function useTurnAnimation({
             size: 'table',
             faceDown: false,
             flipOnArrival: false,
-            durationMs: STEP_TIMING.collect,
+            durationMs: stepTiming.collect,
           };
         }
         case 'stack': {
@@ -122,14 +124,14 @@ export function useTurnAnimation({
             size: 'small',
             faceDown: false,
             flipOnArrival: false,
-            durationMs: STEP_TIMING.stack,
+            durationMs: stepTiming.stack,
           };
         }
         default:
           return null;
       }
     },
-    [get, resolveAnchor, resolveTableTarget],
+    [get, resolveAnchor, resolveTableTarget, stepTiming],
   );
 
   const waitForFlight = useCallback(
@@ -173,7 +175,7 @@ export function useTurnAnimation({
 
   const animateTurn = useCallback(
     async (before: MatgoGameState, after: MatgoGameState): Promise<void> => {
-      const steps = buildTurnSteps(before, after);
+      const steps = buildTurnSteps(before, after, stepTiming);
       if (steps.length === 0) {
         return;
       }
@@ -192,7 +194,7 @@ export function useTurnAnimation({
       setDisplayGame(after);
       setIsAnimating(false);
     },
-    [remeasureAll, runStep],
+    [remeasureAll, runStep, stepTiming],
   );
 
   return {

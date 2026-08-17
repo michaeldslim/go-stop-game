@@ -8,6 +8,7 @@ import { SettingsVolumeSlider } from '../src/components/SettingsVolumeSlider';
 import {
   AI_DIFFICULTY_OPTIONS,
   GAME_MODE_OPTIONS,
+  GAME_SPEED_OPTIONS,
   getLocalizedText,
   LANGUAGE_OPTIONS,
 } from '../src/constants/gameOptions';
@@ -15,7 +16,7 @@ import { colors } from '../src/constants/colors';
 import { useTranslation } from '../src/i18n/useTranslation';
 import { useGameSounds } from '../src/audio/GameSoundsProvider';
 import { useSettings } from '../src/settings/SettingsProvider';
-import type { AiDifficulty, AppLanguage, GameMode } from '../src/types/game';
+import type { AiDifficulty, AppLanguage, GameMode, GameSpeed } from '../src/types/game';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -63,6 +64,17 @@ export default function SettingsScreen() {
             subtitle: getLocalizedText(language, option.description),
             disabled: option.comingSoon,
             badge: option.comingSoon ? t('setup.comingSoon') : undefined,
+          }))}
+        />
+
+        <OptionPicker<GameSpeed>
+          label={t('settings.gameSpeed')}
+          value={settings.gameSpeed}
+          onChange={(value) => updateSettings({ gameSpeed: value })}
+          options={GAME_SPEED_OPTIONS.map((option) => ({
+            value: option.value,
+            title: getLocalizedText(language, option.labels),
+            subtitle: getLocalizedText(language, option.description),
           }))}
         />
 

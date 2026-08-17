@@ -22,7 +22,8 @@ import {
   playHandCard,
 } from './turnEngine';
 import { declareBomb, declareShake, canDeclareBomb, canDeclareShake } from './specialMoves';
-import { AI_TURN_DELAY_MS, buildTurnSteps } from './turnSteps';
+import { getGameSpeedTimings } from './gameSpeed';
+import { buildTurnSteps } from './turnSteps';
 import { detectHumanYakuCompletion, type YakuType } from './yaku';
 import { useTurnAnimation } from './useTurnAnimation';
 import type { AiDifficulty, GameMode } from '../types/game';
@@ -78,8 +79,12 @@ function winnerParam(game: MatgoGameState): string {
   return game.winnerIndex === 0 ? 'human' : 'ai';
 }
 
-function shouldAnimate(before: MatgoGameState, after: MatgoGameState): boolean {
-  return buildTurnSteps(before, after).length > 0;
+function shouldAnimate(
+  before: MatgoGameState,
+  after: MatgoGameState,
+  timing = getGameSpeedTimings('slow'),
+): boolean {
+  return buildTurnSteps(before, after, timing).length > 0;
 }
 
 export function useMatgoGame(
@@ -90,6 +95,10 @@ export function useMatgoGame(
   const router = useRouter();
   const { settings } = useSettings();
   const { playEffects } = useGameSounds();
+  const stepTiming = useMemo(
+    () => getGameSpeedTimings(settings.gameSpeed),
+    [settings.gameSpeed],
+  );
 
   const initialState = useMemo(
     () => createGame({ mode, aiDifficulty, handMultiplier }),
@@ -111,6 +120,7 @@ export function useMatgoGame(
     inFlightCardId,
   } = useTurnAnimation({
     hapticsEnabled: settings.hapticsEnabled,
+    stepTiming,
   });
 
   const boardGame = displayGame ?? game;
@@ -179,7 +189,7 @@ export function useMatgoGame(
         void playEffects(after.soundEffects);
       }
 
-      if (!shouldAnimate(before, after)) {
+      if (!shouldAnimate(before, after, stepTiming)) {
         notifyHumanYaku(before, after);
         dispatch(action);
         return;
@@ -189,7 +199,7 @@ export function useMatgoGame(
       notifyHumanYaku(before, after);
       dispatch(action);
     },
-    [animateTurn, notifyHumanYaku, playEffects, settings.soundEnabled],
+    [animateTurn, notifyHumanYaku, playEffects, settings.soundEnabled, stepTiming],
   );
 
   useEffect(() => {
@@ -308,10 +318,10 @@ export function useMatgoGame(
 
     const timer = setTimeout(() => {
       void dispatchAnimated({ type: 'AI_TURN' });
-    }, AI_TURN_DELAY_MS);
+    }, stepTiming.aiTurnDelayMs);
 
     return () => clearTimeout(timer);
-  }, [game, isAnimating, dispatchAnimated]);
+  }, [game, isAnimating, dispatchAnimated, stepTiming.aiTurnDelayMs]);
 
   return {
     game: boardGame,
@@ -340,5 +350,6 @@ export function useMatgoGame(
     choosableTableIndices,
     activeYaku,
     dismissYakuCallout,
+    specialMoveFirstPromptMs: stepTiming.specialMoveFirstPromptMs,
   };
 }

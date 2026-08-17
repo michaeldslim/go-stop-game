@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { DEFAULT_SETTINGS, SOUND_VOLUME_MAX, SOUND_VOLUME_MIN, type AppSettings } from '../types/game';
+import { DEFAULT_SETTINGS, SOUND_VOLUME_MAX, SOUND_VOLUME_MIN, type AppSettings, type GameSpeed } from '../types/game';
 
 const STORAGE_KEY = '@hwatu/settings';
 
@@ -21,6 +21,13 @@ function resolveSoundVolume(parsed: StoredSettings): number {
   return Math.max(SOUND_VOLUME_MIN, Math.min(SOUND_VOLUME_MAX, Math.round(raw)));
 }
 
+function resolveGameSpeed(parsed: StoredSettings): GameSpeed {
+  if (parsed.gameSpeed === 'slow' || parsed.gameSpeed === 'medium' || parsed.gameSpeed === 'fast') {
+    return parsed.gameSpeed;
+  }
+  return DEFAULT_SETTINGS.gameSpeed;
+}
+
 function loadSettings(raw: string | null): AppSettings {
   if (!raw) {
     return DEFAULT_SETTINGS;
@@ -32,6 +39,7 @@ function loadSettings(raw: string | null): AppSettings {
       ...DEFAULT_SETTINGS,
       ...parsed,
       soundVolume: resolveSoundVolume(parsed),
+      gameSpeed: resolveGameSpeed(parsed),
     };
   } catch {
     return DEFAULT_SETTINGS;
