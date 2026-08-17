@@ -43,4 +43,10 @@ eas build -p android --profile preview
 eas build -p android --profile production
 ```
 
+### OTA Update (JS-only changes)
+
+```bash
+eas update --channel production --message "Fix bug / update description"
+```
+
 `runtimeVersion` in `app.json` and EAS Update channels are used for JS-only updates. A new native build is required after native changes (icons, permissions, new native modules).
