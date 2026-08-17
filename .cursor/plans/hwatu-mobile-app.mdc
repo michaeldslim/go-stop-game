@@ -1,6 +1,6 @@
 ---
 name: Hwatu Mobile App
-overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약 콜아웃·gather-long·손패 가로 스크롤·보드 세로 스크롤(3P)·애니 앵커 remeasure·collect sourceTableIndex·AI 손패 mini. Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드는 미구현(optional).
+overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약 콜아웃·gather-long·손패 가로 스크롤·보드 세로 스크롤(3P)·애니 앵커 remeasure·collect sourceTableIndex·AI 손패 mini·턴 페이싱(수집 전 0.5s·AI 1.2s)·playHand 타겟 슬롯 수정·특수기술 모달. Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드는 미구현(optional).
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩, 앱 아이콘, 기본 폴더 구조
@@ -12,7 +12,7 @@ todos:
     content: 화투 도메인 타입 정의 (Month, CardType, Card, Deck, Player, GameState, AiDifficulty)
     status: completed
   - id: settings-setup
-    content: Settings + Game Setup screens — AI 난이도, 언어, 사운드/햅틱, AsyncStorage
+    content: Settings screen — game mode, AI 난이도, 언어, 사운드/햅틱, AsyncStorage (replaces separate setup)
     status: completed
   - id: deck-engine
     content: 48장 덱 생성·셔플·딜링 — Human vs AI (맞고 2P 기본, 고스톱 3P는 1인+AI×2)
@@ -77,7 +77,7 @@ Rules references:
 | **P0** | **Human vs AI only** — no local pass-and-play between humans |
 | **P1** | Smooth touch UX for selecting hand cards and table matches |
 | **P1** | **Card motion** — play, flip, and collect animated (not instant state snap) |
-| **P1** | **AI difficulty** — 초보 / 중급 / 고급 / 전문가 (settings + per-game setup) |
+| **P1** | **AI difficulty** — 초보 / 중급 / 고급 / 전문가 (Settings; Home Play uses defaults) |
 | **P1** | 맞고 (2P vs AI) + 고스톱 (1 human + 2 AI) + 화투 심플 — all playable |
 | **P2** | Online multiplayer (out of scope v1); bonus/joker deck cards (no art yet) |
 
@@ -215,7 +215,7 @@ src/
     deck.ts                # createDeck, shuffleDeck, drawCards
     cardRank.ts            # dealer draw ranking (month + type)
     deal.ts                # chooseDealer, dealMatgo2P, dealGostop3P, dealHwatu2P
-    createGame.ts          # createGame (matgo / gostop / hwatu — shuffle → dealer → deal → special start)
+    createGame.ts          # createGame — 2P human always dealer; 3P gostop uses dealer draw
     specialMoves.ts        # 쪽·따닥·싹쓸이·뻑·싼 것·흔들기·폭탄 + bonusPi awards
     settlement.ts          # 고박·피박·광박 settlement + nagari handMultiplier
     constants.ts           # hand/table/target sizes per mode
@@ -225,7 +225,7 @@ src/
     yaku.ts                # detectHumanYakuCompletion (godori·hongdan·cheongdan·chodan)
     specialStart.ts        # pre-play 4월/3장 스택/재딜 checks
     goStop.ts              # Go/Stop prompt, AI policy, hand-end scoring
-    turnSteps.ts           # TurnStep types + buildTurnSteps + applyVisualStep
+    turnSteps.ts           # TurnStep types + buildTurnSteps + applyVisualStep + STEP_TIMING + AI_TURN_DELAY_MS
     useTurnAnimation.ts    # animation queue, displayGame, per-step sound/haptics
     ai.ts                  # runAiTurn — difficulty-tuned match + Go/Stop heuristics
     useMatgoGame.ts        # reducer + AI turn + yaku queue + turn animations + result nav
@@ -240,7 +240,7 @@ src/
     LayoutAnchor.tsx       # measureInWindow anchor registry + remeasureAll on scroll
     GoStopModal.tsx        # human Go/Stop decision modal
     SepCupModal.tsx        # September cup 열끗 vs 쌍피 choice
-    SpecialMoveBar.tsx     # 흔들기 / 폭탄 declare chips
+    SpecialMoveModal.tsx   # 흔들기 / 폭탄 declare modal (header trigger + auto-open)
     ScreenHeader.tsx       # back + title header
     OptionPicker.tsx       # segmented option list
     SettingsToggleRow.tsx  # switch row for settings
@@ -258,12 +258,11 @@ src/
     game.ts                # AiDifficulty, GameMode ('matgo' | 'gostop' | 'hwatu'), AppSettings
     gameState.ts           # MatgoGameState, PlayerState, TableCard, PendingAction
 app/
-  index.tsx                # Home
-  setup.tsx                # Game setup (mode + AI difficulty)
-  settings.tsx             # Settings (defaults, language, sound, haptics)
+  index.tsx                # Home — Play uses Settings defaults → /game
+  settings.tsx             # Settings (game mode, AI difficulty, language, sound, haptics)
   game.tsx                 # Playable matgo — deal, turns, scoring, Go/Stop, fan hand
   result.tsx               # Win/loss vs AI, score breakdown, play again
-  rules.tsx                # Localized rules (EN/KO, 7 sections)
+  rules.tsx                # Localized rules (EN/KO, 7 sections — no external credit footer)
 ```
 
 **Import workflow** (if replacing art): stage WebP in `assets/cards/source/` with Wikimedia Hanafuda filenames → `npm run import:cards`. Hanafuda→Hwatu id mapping lives in `import-card-source.mjs` (e.g. August ribbon reuses July Tanzaku; October 3rd junk uses October Tanzaku).
@@ -293,7 +292,7 @@ Settlement (고박·피박·광박) applies between human and AI opponent(s) usi
 
 ### AI difficulty
 
-Selectable in **Game Setup** and default in **Settings**. Persist with AsyncStorage.
+Selectable in **Settings** (default game mode + AI difficulty). Persist with AsyncStorage. Home **Play** launches `/game` with saved defaults.
 
 | Level | Korean | English | Behavior (summary) |
 |-------|--------|---------|-------------------|
@@ -320,11 +319,13 @@ type AiDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 | **Go-Stop** | 고스톱 | 1 | 2 | 7 each | 6 | **3 points** |
 | **Hwatu Simple** | 화투 심플 | 1 | 1 | 10 each | 8 | **per-card** (no Go/Stop) |
 
-> All three modes selectable in Setup. 고스톱 uses two AI rows at top; same difficulty for both AI seats.
+> All three modes selectable in **Settings**. 고스톱 uses two AI rows at top; same difficulty for both AI seats.
 
 ### Setup & Dealing
 
-1. **Choose dealer (선)**: Flip cards face-down; highest card drawn becomes dealer.
+1. **Choose dealer (선)**:
+   - **맞고 / 화투 (2P)**: Human (seat 0) is always dealer (`resolveDealerIndex` in `createGame.ts`).
+   - **고스톱 (3P)**: Flip cards face-down; highest card drawn per seat becomes dealer (`chooseDealer`).
 2. Dealer shuffles; player to dealer's **left** cuts the deck onto the table.
 3. Deal counterclockwise, starting with player to dealer's **right**.
 4. If a **bonus card** appears on the table during deal, dealer takes it and replaces from deck until table has correct count.
@@ -463,36 +464,41 @@ No Go/Stop — play until cards exhausted. Per-card scoring (`calculateHwatuSimp
 ## Screen Flow
 
 ```
-[Home] ──▶ [Game Setup] ──▶ [Game] ──▶ [Result]
-  │              │              │
-  ├── [Rules]    │              ├── Go/Stop modal (matgo/gostop)
-  └── [Settings]─┘                                              ├── Sep cup modal (국화잔 role)
-                                ├── Yaku callout overlay (godori·단 complete)
-                                └── Special move bar (흔들기/폭탄)
+[Home] ──▶ [Game] ──▶ [Result]
+  │              │
+  ├── [Rules]    ├── Go/Stop modal (matgo/gostop)
+  └── [Settings] ├── Sep cup modal (국화잔 role)
+                 ├── Yaku callout overlay (godori·단 complete)
+                 └── Special move modal (흔들기/폭탄 — header + auto-open)
 ```
 
 ### Home Screen ✅
 
 - Hero logo: **8월 광** (`assets/home-logo.png` — copy of `cards/3x/aug-bright.png`, transparent PNG, 136×222pt)
-- App title **Hwatu** + subtitle (gold title on felt background)
-- **Play** (gold primary CTA, felt text) → setup
+- App title **Hwatu** + subtitle **화투** (gold title, smaller cream subtitle with letter-spacing)
+- **Play** (gold primary CTA, felt text) → `/game` with Settings defaults (`defaultGameMode`, `defaultAiDifficulty`)
 - **How to Play** → rules (gold outline secondary)
-- **Settings** → language, default AI difficulty, sound, haptics
+- **Settings** → game mode, AI difficulty, language, sound, haptics (gold outline tertiary)
 
-### Game Setup Screen ✅
+### Settings Screen ✅
 
 - **Game mode**: 맞고 (vs 1 AI) · 고스톱 (vs 2 AI) · 화투 심플 (vs 1 AI, no Go/Stop)
 - **AI difficulty**: 초보 · 중급 · 고급 · 전문가 (`OptionPicker`)
-- **Start** (gold primary CTA) → `createGame({ mode, aiDifficulty })` — shuffle, dealer draw, mode-specific deal
-- Link to Settings for changing defaults
+- Language, sound volume, haptics toggles
+- Localized back label (`common.back` — EN/KO)
+- Card art attribution credit (Wikimedia CC BY-SA)
+
+### Game launch
+
+- **Play** on Home → `createGame({ mode, aiDifficulty })` from AsyncStorage settings — shuffle, dealer resolve, mode-specific deal
 
 ### Game Screen (portrait) — 맞고 2P / 고스톱 3P ✅
 
-Fixed **top bar** (leave + turn hint). Everything below scrolls vertically in one `ScrollView` (`boardScroll`) — needed for 3P (two AI rows + piles + table + human pile + hand). Scroll disabled while `isAnimating`; `remeasureAll()` on scroll end keeps flight anchors accurate.
+Fixed **top bar** (leave + optional **특수/Special** button when 흔들기/폭탄 available + turn hint). Everything below scrolls vertically in one `ScrollView` (`boardScroll`) — needed for 3P (two AI rows + piles + table + human pile + hand). Scroll disabled while `isAnimating`; `remeasureAll()` on scroll end keeps flight anchors accurate.
 
 ```
 ┌─────────────────────────────┐
-│ ← Leave          Your turn  │  ← fixed top bar
+│ ← Leave  [특수]   Your turn │  ← fixed top bar (특수 when shake/bomb available)
 ├─────────────────────────────┤
 │ ↕ scrollable board          │
 │ AI · [difficulty]  N pts    │
@@ -522,7 +528,7 @@ Fixed **top bar** (leave + turn hint). Everything below scrolls vertically in on
 - **Pre-play specials** — 4월 자동승, 양쪽 4월 무승부, 바닥 4장 재딜, 바닥 3장 스택 (`specialStart.ts`)
 - **Turn loop:** tap hand card → auto flip → collect / stack / table
 - Human chooses table card when multiple same-month matches
-- AI auto-plays on its turn (`runAiTurn`, 700ms delay)
+- AI auto-plays on its turn (`runAiTurn`, **1200ms** pre-turn delay — `AI_TURN_DELAY_MS`)
 - 뻑 (뻑/싸다): flip onto pair stacks 3 cards on table
 - **Scoring** — live score display; yaku engine (`scoring.ts`)
 - **Go/Stop** — human modal (`GoStopModal`); AI auto-decides by difficulty (`goStop.ts`)
@@ -536,7 +542,7 @@ Fixed **top bar** (leave + turn hint). Everything below scrolls vertically in on
 - **Sound + haptics** — `playCard` / `flipCard` per animation step (`useTurnAnimation`); haptic on collect step; **yaku** sound + success haptic on human yaku complete
 - **Yaku callout** — `yaku.ts` detects 3rd godori·홍단·청단·초단 card; `YakuCalloutOverlay` (dim backdrop, gold banner, per-yaku accent); queued if multiple complete in one turn
 - **Card motion (Phase 3)** — sequenced play → flip → collect via `turnSteps.ts`, `FlyingCard`, `TurnAnimationOverlay`, `LayoutAnchor`; `isAnimating` input lock
-- **Special moves (Phase 4)** — `SpecialMoveBar` (흔들기/폭탄); engine awards bonus pi for 쪽·따닥·싹쓸이·뻑·싼 것
+- **Special moves (Phase 4)** — `SpecialMoveModal` (흔들기/폭탄); header **특수** button; auto-opens **1.5s** after hand ready on first human turn with available moves; engine awards bonus pi for 쪽·따닥·싹쓸이·뻑·싼 것
 - **September cup** — `SepCupModal` on collecting `sep-animal-double`
 - **Settlement** — `settlement.ts`; result screen shows chips, 고박·피박·광박, nagari 2× next hand
 
@@ -581,7 +587,7 @@ AI yaku completions do not show the callout (human celebration only). Scoring st
 | Today | Target |
 |-------|--------|
 | Tap hand card → board instantly shows final hand, table, collected | Same logic, but UI **plays each step** before showing the next state |
-| AI turn jumps after ~700ms delay | AI uses the **same animation queue** as human (mirrored layout for top player) |
+| AI turn jumps after delay | AI uses the **same animation queue** as human (mirrored layout for top player); **1200ms** pre-turn pause |
 | Sounds fire from `soundEffects` batch after state change | Sounds/haptics fire **per animation step** (play → flip → collect) |
 
 ### Turn choreography (human & AI)
@@ -632,11 +638,13 @@ Keep **domain rules** in `turnEngine.ts`; add a thin **presentation layer**:
 
 | Step | Motion | Timing | Notes |
 |------|--------|--------|-------|
-| **Play hand** | Hand anchor → table slot | ~250ms, ease-out | Human: from bottom hand row; AI: from top face-down row |
-| **Flip deck** | Deck anchor → table; Y rotation 0°→180° on Y or scaleX flip | ~300ms | Brief pause after play (~150ms) optional |
+| **Play hand** | Hand anchor → table slot | ~250ms, ease-out | Target slot derived from **actual collected table card** (`findTableCardIndex`), not first same-month index |
+| **Pause before collect** | Hold on table | **500ms** | After play when hand match collects; also before flip-match collect |
+| **Flip deck** | Deck anchor → table; Y rotation 0°→180° on Y or scaleX flip | ~300ms | Brief pause after play with no match (~200ms) |
 | **Collect** | Table (+ flip if matched) → collected tray | ~350ms per group | Multiple cards: stagger 50ms or move as a stack |
 | **뻑 stack** | Flip lands on pair; slight bounce | ~200ms | No flight to collected pile |
 | **No match** | Play + flip land on table only | — | Highlight optional |
+| **AI pre-turn** | — | **1200ms** | `AI_TURN_DELAY_MS` before `AI_TURN` dispatch |
 
 Use `withSpring` for land; `withTiming` for flight. Collected pile: cards shrink slightly into tray on arrival (matches `pile` size).
 
@@ -644,7 +652,7 @@ Use `withSpring` for land; `withTiming` for flight. Collected pile: cards shrink
 
 - **Same step types** — only anchor positions differ (seat 0 bottom, seat 1 top).
 - **Input lock** — `isAnimating` disables hand/table taps; pending table choice waits until play+flip animations finish, then shows choosable highlights.
-- **AI delay** — keep pre-turn pause; run animation queue at human-readable speed (toggle “fast AI” later).
+- **AI delay** — `AI_TURN_DELAY_MS` (1200ms) pre-turn pause; same animation queue at human-readable speed (toggle “fast AI” later).
 
 ### Audio & haptics sync
 
@@ -657,7 +665,7 @@ src/
   audio/
     useGameSounds.ts       # expo-audio players for play / flip / yaku
   game/
-    turnSteps.ts           # TurnStep types + buildTurnSteps + applyVisualStep
+    turnSteps.ts           # TurnStep types + buildTurnSteps + applyVisualStep + STEP_TIMING + AI_TURN_DELAY_MS
     yaku.ts                # yaku completion detection for callout
     useTurnAnimation.ts    # animation queue + displayGame + per-step sound/haptics
     useMatgoGame.ts        # yaku queue + enqueue on human turn
@@ -680,7 +688,7 @@ src/
 - [x] No double-tap or illegal plays while `isAnimating`
 - [x] 뻑: flip stacks on table without collect flight
 - [x] Sounds align with play and flip animation steps
-- [x] Collect flights originate from correct table slot (`sourceTableIndex` on collect steps)
+- [x] Collect flights originate from correct table slot (`sourceTableIndex` on collect steps; `findTableCardIndex` for play-hand flight target)
 - [x] Anchors remeasured before each step and after board scroll (accurate paths on 3P layout)
 
 ### Phase placement
@@ -724,7 +732,7 @@ interface MatgoGameState {
 }
 ```
 
-**Phase 4 complete** — 3P gostop, hwatu simple, advanced rules, settlement, sep cup choice. **Post-Phase 4 polish** — yaku callout, gather-long on yaku, hand horizontal scroll, unified board vertical scroll (3P), `LayoutAnchor.remeasureAll`, collect `sourceTableIndex`, AI `mini` hand cards.
+**Phase 4 complete** — 3P gostop, hwatu simple, advanced rules, settlement, sep cup choice. **Post-Phase 4 polish** — yaku callout, gather-long on yaku, hand horizontal scroll, unified board vertical scroll (3P), `LayoutAnchor.remeasureAll`, collect `sourceTableIndex`, AI `mini` hand cards, turn pacing (`pauseBeforeCollect`, `AI_TURN_DELAY_MS`), play-hand target slot fix, special-move modal, home subtitle, settings-as-setup, 2P human-always-dealer.
 
 ---
 
@@ -737,12 +745,12 @@ interface MatgoGameState {
 - [x] Card catalog (`cardCatalog.ts` — 48 cards, correct month/type/flags)
 - [x] Card artwork pipeline (512×839 PNG, @1x/@2x/@3x, Wikimedia Hanafuda)
 - [x] `CardView` component with `expo-image`
-- [x] Home screen → Setup → card preview (`app/index.tsx` → `app/setup.tsx` → `app/game.tsx`)
+- [x] Home screen → Game (`app/index.tsx` → `app/game.tsx` via Settings defaults)
 - [x] Rules placeholder screen (`app/rules.tsx`)
 - [x] Domain types (`src/types/hwatu.ts` — `CardDefinition`, flags)
 - [x] Game/settings types (`src/types/game.ts` — `AiDifficulty`, `GameMode`, `AppSettings`)
 - [x] Settings screen (`app/settings.tsx` — default AI difficulty, language, sound, haptics)
-- [x] Game setup screen (`app/setup.tsx` — mode + AI difficulty: 초보/중급/고급/전문가)
+- [x] Settings screen (`app/settings.tsx` — game mode, AI difficulty, language, sound, haptics)
 - [x] Settings persistence (`src/settings/SettingsProvider.tsx` — AsyncStorage)
 - [x] Shared UI (`ScreenHeader`, `OptionPicker`, `SettingsToggleRow`)
 - [x] Localized option labels (`src/constants/gameOptions.ts` — EN/KO labels for pickers)
@@ -751,7 +759,8 @@ interface MatgoGameState {
 
 - [x] Deck, shuffle, deal — **맞고 2P** (human + 1 AI)
   - `createDeck` / `shuffleDeck` (Fisher–Yates, injectable RNG)
-  - `chooseDealer` — draw by seat; highest month + type wins
+  - `chooseDealer` — draw by seat; highest month + type wins (**3P gostop only**)
+  - 2P modes — human (index 0) always dealer via `resolveDealerIndex`
   - `dealMatgo2P` — 5 each → 4 table → 5 each → 4 table, from dealer's right
   - `createMatgoGame` — full setup; 20 cards remain in center deck
   - `scripts/verify-matgo-deal.ts` — 100-seed invariant check
@@ -787,7 +796,7 @@ interface MatgoGameState {
 - [x] **AI mini hand** — opponent face-down fan uses `CardSize 'mini'` (22×36pt)
 - [ ] Deal animation (optional — cards fly from deck to hand/table on new hand) — deferred
 - [x] AI tuning per difficulty (lookahead, mistake rate, Go/Stop policy) — Phase 2 baseline; shake/bomb in Phase 4
-- [x] i18n (EN/KO) + Rules screen content (`src/i18n/`, localized Home/Setup/Settings/Game/Rules)
+- [x] i18n (EN/KO) + Rules screen content (`src/i18n/`, localized Home/Settings/Game/Rules)
 
 ### Phase 4 — Advanced Rules & Expansion ✅
 
@@ -797,7 +806,7 @@ interface MatgoGameState {
 - [x] **Hwatu simple variant** vs AI (`mode: 'hwatu'`, `calculateHwatuSimpleScore`, no Go/Stop prompt)
 - [ ] Deal animation on new hand (optional polish — deferred)
 - [x] **쪽, 따닥, 싹쓸이, 뻑/싸다, 싼 것** — `bonusPi` awards via `specialMoves.ts` + `turnEngine.ts`
-- [x] **흔들기, 폭탄** — `declareShake` / `declareBomb` / `playBomb`; `scoreMultiplier: 2`; `SpecialMoveBar` UI
+- [x] **흔들기, 폭탄** — `declareShake` / `declareBomb` / `playBomb`; `scoreMultiplier: 2`; `SpecialMoveModal` UI (header trigger + auto-open)
 - [x] **September cup** role choice — `chooseSepCupRole` + `SepCupModal` (열끗 vs 쌍피)
 - [x] **고박, 피박, 광박** — `settlement.ts` + result screen settlement lines
 - [x] **나가리** — void hand; `handMultiplier` doubles on play again from result
@@ -818,7 +827,7 @@ interface MatgoGameState {
 |---------|-----------|
 | **Palette** | Gold `#C9A227`, cream `#F5E6C8`, dark green felt `#1B4D3E`; deep red `#8B1A1A` reserved (legacy icon/splash, not primary UI) |
 | **Primary CTA** | Gold fill + felt text — Play, Start buttons; settings toggle on-state |
-| **Secondary CTA** | Gold outline + gold text — How to Play, section accents |
+| **Secondary CTA** | Gold outline + gold text — How to Play, Settings, section accents |
 | **Typography** | System sans for UI; card art carries Korean/Chinese characters |
 | **Table** | Felt texture background, cards cast soft shadow |
 | **Home hero** | August bright card (`aug-bright` / 8월 광) — no red splash frame on home |
@@ -832,15 +841,15 @@ interface MatgoGameState {
 - [x] App icon and splash display correctly
 - [x] Single card renders sharply at @3x on a 390pt-wide phone
 - [x] `cardCatalog.ts` lists all 48 cards with correct month/type
-- [x] Home screen navigates to Setup → game; hero uses **8월 광** card art (`home-logo.png`)
-- [x] Setup screen — game mode + **AI difficulty** picker
+- [x] Home screen navigates to Game (Settings defaults); hero uses **8월 광** card art (`home-logo.png`) + **화투** subtitle
+- [x] Settings screen — game mode + **AI difficulty** picker (replaces separate setup screen)
 - [x] Default difficulty (and language, sound, haptics) persists in Settings
 
 ## Acceptance Criteria — Phase 2 ✅
 
 - [x] **맞고** full game vs AI playable start to finish
 - [x] All four AI difficulties selectable and behave noticeably different
-- [x] Correct dealing (10 hand / 8 table) and dealer selection (human ↔ AI seats)
+- [x] Correct dealing (10 hand / 8 table); **2P human always dealer**; 3P dealer draw
 - [x] Turn order and play (human ↔ AI) — dealer first, alternating turns
 - [x] Matching, stacking (뻑), and collection work for both sides
 - [x] Captured cards visible for human and AI (`CollectedPileView`)
@@ -860,12 +869,12 @@ interface MatgoGameState {
 - [x] Input locked during `isAnimating` (no double-tap / illegal plays)
 - [x] 뻑 stack: flip lands on table pair without collect flight
 - [x] Sound/haptics fire per animation step (play/flip); yaku uses separate gather-long cue
-- [x] EN/KO i18n across Home, Setup, Settings, Game, Rules
-- [x] Rules screen with localized content (7 sections)
+- [x] EN/KO i18n across Home, Settings, Game, Rules (incl. settings back label, game.specialMoves)
+- [x] Rules screen with localized content (7 sections; no external rules credit footer)
 
 ## Acceptance Criteria — Phase 4 ✅
 
-- [x] Setup offers 맞고, 고스톱, and 화투 심플 (no “coming soon” on gostop)
+- [x] Setup offers 맞고, 고스톱, and 화투 심플 via **Settings** (no separate setup screen)
 - [x] 고스톱 3P: 7 hand / 6 table / 3-point target; human + 2 AI with separate piles and scores
 - [x] 화투 심플: full hand to exhaustion, per-card scoring, no Go/Stop modal
 - [x] 쪽 detected when play-to-table + flip match; bonus pi awarded
@@ -873,7 +882,7 @@ interface MatgoGameState {
 - [x] 싹쓸이 when table empty at end of turn; bonus pi
 - [x] 뻑 stack awards pi to collector when 3+ card stack taken
 - [x] 싼 것 when cheaper table match chosen; bonus pi
-- [x] 흔들기 / 폭탄 UI chips; 2× score multiplier on win settlement
+- [x] 흔들기 / 폭탄 modal UI; 2× score multiplier on win settlement
 - [x] 폭탄 plays 3 cards + flips deck twice
 - [x] September cup modal on first collection of `sep-animal-double`
 - [x] Result screen: settlement chips, 고박·피박·광박 flags, nagari next-hand multiplier
@@ -886,6 +895,13 @@ interface MatgoGameState {
 - [x] Multiple yaku in one turn queue sequentially in overlay
 - [x] Human hand scrolls horizontally when fan exceeds screen width (e.g. Galaxy narrow viewport)
 - [x] Collected pile 피 rows remain overlap stack (5/row); 광·띠·열끗 rows keep horizontal scroll
+- [x] **Turn pacing** — 500ms pause before collect steps; 200ms pause after play with no match; AI pre-turn delay 1200ms
+- [x] **Play-hand flight** — card flies to the matched table slot (`findTableCardIndex`), not wrong pile / empty slot
+- [x] **Special move modal** — `SpecialMoveModal` replaces inline chips; header **특수** button; auto-open 1.5s after hand ready on first eligible turn
+- [x] **Home** — Hwatu + **화투** subtitle; Settings / How to Play buttons with gold border
+- [x] **2P dealer** — human always 선; 3P retains dealer draw
+- [x] **Settings** — game mode + AI difficulty (setup merged); localized back link
+- [x] **Rules** — external attribution credit removed from rules screen body
 
 ## Acceptance Criteria — Board layout & animation sync ✅
 
@@ -898,15 +914,6 @@ interface MatgoGameState {
 
 ---
 
-## References
-
-- [화투(고스톱) 치는 방법 — 도까함](https://ruabin1001.com/entry/%ED%99%94%ED%88%AC%EA%B3%A0%EC%8A%A4%ED%86%B1-%EC%B9%98%EB%8A%94-%EB%B0%A9%EB%B2%95-%EA%B3%A0%EC%8A%A4%ED%86%B1-%EB%A3%B0%EA%B3%BC-%EC%A0%90%EC%88%98%EB%82%B4%EA%B8%B0-%ED%8C%A8-%EB%86%93%EB%8A%94-%EB%B0%A9%EB%B2%95) (primary — Korean rules, card types, special moves)
-- [How to Play Go-Stop — Instructables](https://www.instructables.com/How-to-Play-Go-Stop/)
-- [Wikimedia Commons — SVG Hanafuda](https://commons.wikimedia.org/wiki/Category:SVG_Hanafuda) (card artwork, CC BY-SA 4.0)
-- [Go-Stop — Wikipedia](https://en.wikipedia.org/wiki/Go-Stop)
-
----
-
 ## Next Step
 
-**Phase 5 — Release** — EAS Build (Android → iOS), Play Store / App Store listing. Optional polish: deal animation, bonus/joker card art + engine support. Post-Phase 4 UX polish (yaku callout, hand scroll, board scroll, animation anchor sync, AI mini hands) is **done**.
+**Phase 5 — Release** — EAS Build (Android → iOS), Play Store / App Store listing. Optional polish: deal animation, bonus/joker card art + engine support. Post-Phase 4 UX polish (yaku callout, hand scroll, board scroll, animation anchor sync, AI mini hands, turn pacing, play-hand targeting, special-move modal, home/settings/rules UX) is **done**.
