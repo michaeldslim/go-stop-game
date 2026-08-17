@@ -1,7 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, useState } from 'react';
-import { useGameSounds } from '../audio/useGameSounds';
-import type { MatgoGameState } from '../types/gameState';
+import type { GameSoundEffect, MatgoGameState } from '../types/gameState';
 import type { ActiveFlightState } from '../components/TurnAnimationOverlay';
 import { anchorKeys, useLayoutAnchors, type AnchorPoint } from '../components/LayoutAnchor';
 import {
@@ -17,6 +16,7 @@ interface ActiveFlight extends ActiveFlightState {}
 interface UseTurnAnimationOptions {
   soundEnabled: boolean;
   hapticsEnabled: boolean;
+  playEffects: (effects: GameSoundEffect[]) => Promise<void>;
 }
 
 function delay(ms: number): Promise<void> {
@@ -29,8 +29,11 @@ function fallbackPoint(): AnchorPoint {
   return { x: 200, y: 400 };
 }
 
-export function useTurnAnimation({ soundEnabled, hapticsEnabled }: UseTurnAnimationOptions) {
-  const { playEffects } = useGameSounds(soundEnabled);
+export function useTurnAnimation({
+  soundEnabled,
+  hapticsEnabled,
+  playEffects,
+}: UseTurnAnimationOptions) {
   const { get } = useLayoutAnchors();
   const [displayGame, setDisplayGame] = useState<MatgoGameState | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -135,7 +138,7 @@ export function useTurnAnimation({ soundEnabled, hapticsEnabled }: UseTurnAnimat
   const runStep = useCallback(
     async (step: TurnStep, visual: MatgoGameState): Promise<MatgoGameState> => {
       const sound = soundForStep(step);
-      if (sound) {
+      if (sound && soundEnabled) {
         void playEffects([sound]);
       }
       if (step.type === 'collect' && hapticsEnabled) {
@@ -154,7 +157,7 @@ export function useTurnAnimation({ soundEnabled, hapticsEnabled }: UseTurnAnimat
 
       return applyVisualStep(visual, step);
     },
-    [hapticsEnabled, playEffects, resolveStepFlight, waitForFlight],
+    [hapticsEnabled, playEffects, resolveStepFlight, soundEnabled, waitForFlight],
   );
 
   const animateTurn = useCallback(

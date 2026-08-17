@@ -1,4 +1,9 @@
-import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import {
+  useAudioPlayer,
+  setAudioModeAsync,
+  setIsAudioActiveAsync,
+  type AudioPlayer,
+} from 'expo-audio';
 import { useCallback, useEffect } from 'react';
 import type { GameSoundEffect } from '../types/gameState';
 
@@ -9,6 +14,8 @@ const SOUND_ASSETS = {
 } as const;
 
 const EFFECT_GAP_MS = 90;
+const LOAD_POLL_MS = 50;
+const LOAD_WAIT_MS = 2500;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -16,16 +23,55 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+async function configureAudioSession(): Promise<void> {
+  await setIsAudioActiveAsync(true);
+  await setAudioModeAsync({
+    playsInSilentMode: true,
+    shouldPlayInBackground: false,
+    interruptionMode: 'doNotMix',
+  });
+}
+
+async function waitForLoaded(player: AudioPlayer): Promise<boolean> {
+  if (player.isLoaded) {
+    return true;
+  }
+
+  const start = Date.now();
+  while (!player.isLoaded && Date.now() - start < LOAD_WAIT_MS) {
+    await delay(LOAD_POLL_MS);
+  }
+  return player.isLoaded;
+}
+
+async function playLoadedPlayer(player: AudioPlayer): Promise<void> {
+  if (!player.isLoaded) {
+    return;
+  }
+
+  player.volume = 1;
+  player.muted = false;
+
+  if (player.playing) {
+    player.pause();
+  }
+
+  try {
+    await player.seekTo(0);
+  } catch {
+    // seekTo can fail on Android before the first successful play
+  }
+
+  player.play();
+}
+
 export function useGameSounds(enabled: boolean) {
-  const cardPlayer = useAudioPlayer(SOUND_ASSETS.playCard);
-  const flipPlayer = useAudioPlayer(SOUND_ASSETS.flipCard);
-  const yakuPlayer = useAudioPlayer(SOUND_ASSETS.yaku);
+  const cardPlayer = useAudioPlayer(SOUND_ASSETS.playCard, { downloadFirst: true });
+  const flipPlayer = useAudioPlayer(SOUND_ASSETS.flipCard, { downloadFirst: true });
+  const yakuPlayer = useAudioPlayer(SOUND_ASSETS.yaku, { downloadFirst: true });
 
   useEffect(() => {
-    void setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: false,
-    });
+    void configureAudioSession();
   }, []);
 
   const playEffect = useCallback(
@@ -41,8 +87,11 @@ export function useGameSounds(enabled: boolean) {
             ? flipPlayer
             : yakuPlayer;
 
-      await player.seekTo(0);
-      player.play();
+      if (!(await waitForLoaded(player))) {
+        return;
+      }
+
+      await playLoadedPlayer(player);
     },
     [enabled, cardPlayer, flipPlayer, yakuPlayer],
   );

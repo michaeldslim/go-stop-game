@@ -112,6 +112,7 @@ export function useMatgoGame(
   } = useTurnAnimation({
     soundEnabled: settings.soundEnabled,
     hapticsEnabled: settings.hapticsEnabled,
+    playEffects,
   });
 
   const boardGame = displayGame ?? game;

@@ -1,6 +1,6 @@
 ---
 name: Hwatu Mobile App
-overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드는 미구현(optional).
+overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약(고도리·단) 완성 콜아웃·gather-long 사운드·손패 가로 스크롤. Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드는 미구현(optional).
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩, 앱 아이콘, 기본 폴더 구조
@@ -33,7 +33,10 @@ todos:
     content: Go/Stop 결정 UI 및 배수·보너스 칩 계산
     status: completed
   - id: gameplay-polish
-    content: 효과음, 햅틱, 턴 애니메이션 (play/flip/collect)
+    content: 효과음, 햅틱, 턴 애니메이션 (play/flip)
+    status: completed
+  - id: yaku-callout
+    content: 약 완성 콜아웃 (YakuCalloutOverlay) + gather-long 사운드 + 손패 가로 스크롤
     status: completed
   - id: ai-opponent
     content: AI 대전 — 난이도 4단계 (초보/중급/고급/전문가), 턴·Go/Stop·매칭 휴리스틱
@@ -86,8 +89,8 @@ Rules references:
 | Navigation | Expo Router | Home → Game → Result, Settings, Rules |
 | Card images | `expo-image` | `contentFit="contain"`, caching, blur placeholder |
 | Animation | **react-native-reanimated** 3 | Flying cards, flip, slide-to-pile; sequenced turn steps |
-| Audio | `expo-audio` | card flip, match, go/stop |
-| Haptics | `expo-haptics` | match, go declaration |
+| Audio | `expo-audio` | `card.mp3` play · `gather-short.mp3` flip · `gather-long.mp3` yaku complete |
+| Haptics | `expo-haptics` | collect step, yaku complete (success), Go declaration |
 | State | Zustand or reducer | Game engine isolated from UI |
 | Settings | AsyncStorage | language, **AI difficulty**, sound, haptics, default game mode |
 | i18n | Custom provider or i18next | `en` / `ko` |
@@ -175,6 +178,10 @@ December (12): Bright(rain), Junk×2 + double-junk (counts as 2 피)
 
 ```
 assets/
+  sounds/
+    card.mp3             # hand play
+    gather-short.mp3     # deck flip
+    gather-long.mp3      # yaku complete (godori·단)
   home-logo.png       # Home hero — copy of cards/3x/aug-bright.png (8월 광)
   splash-icon.png     # Expo splash (card + red frame + Hwatu text)
   icon.png            # App store icon
@@ -194,6 +201,8 @@ scripts/
   verify-turn-engine.ts    # turn play conserves 48 cards across simulated games
   verify-scoring.ts        # yaku + Go bonus scoring checks
 src/
+  audio/
+    useGameSounds.ts       # playCard / flipCard / yaku (`expo-audio` players)
   cards/
     cardCatalog.ts         # 48 card definitions + ids
     getCardImage.ts        # density-aware require() map
@@ -208,18 +217,20 @@ src/
     constants.ts           # hand/table/target sizes per mode
     tableCards.ts          # table pile helpers, month matching
     turnEngine.ts          # playHandCard, flip, collect, 뻑 stack
-    scoring.ts             # yaku score calculation + Go modifiers
+    scoring.ts             # yaku score calculation + countYakuProgress + Go modifiers
+    yaku.ts                # detectHumanYakuCompletion (godori·hongdan·cheongdan·chodan)
     specialStart.ts        # pre-play 4월/3장 스택/재딜 checks
     goStop.ts              # Go/Stop prompt, AI policy, hand-end scoring
     turnSteps.ts           # TurnStep types + buildTurnSteps + applyVisualStep
     useTurnAnimation.ts    # animation queue, displayGame, per-step sound/haptics
     ai.ts                  # runAiTurn — difficulty-tuned match + Go/Stop heuristics
-    useMatgoGame.ts        # React reducer hook + AI turn + turn animations + result nav
+    useMatgoGame.ts        # reducer + AI turn + yaku queue + turn animations + result nav
     gameUtils.ts           # cloneGameState, turn helpers
   components/
     CardView.tsx           # expo-image card renderer
     CollectedPileView.tsx  # captured pile — 70/30 split, 광·띠·열끗 cascade + 피 grid
-    HandFanView.tsx        # fan arc hand layout with rotation + overlap + layout anchors
+    HandFanView.tsx        # fan arc + horizontal scroll when hand wider than viewport
+    YakuCalloutOverlay.tsx # full-screen yaku celebration (backdrop, banner, per-yaku accent)
     FlyingCard.tsx         # Reanimated flying card overlay
     TurnAnimationOverlay.tsx
     LayoutAnchor.tsx       # measureInWindow anchor registry
@@ -451,7 +462,8 @@ No Go/Stop — play until cards exhausted. Per-card scoring (`calculateHwatuSimp
 [Home] ──▶ [Game Setup] ──▶ [Game] ──▶ [Result]
   │              │              │
   ├── [Rules]    │              ├── Go/Stop modal (matgo/gostop)
-  └── [Settings]─┘              ├── Sep cup modal (국화잔 role)
+  └── [Settings]─┘                                              ├── Sep cup modal (국화잔 role)
+                                ├── Yaku callout overlay (godori·단 complete)
                                 └── Special move bar (흔들기/폭탄)
 ```
 
@@ -512,10 +524,11 @@ No Go/Stop — play until cards exhausted. Per-card scoring (`calculateHwatuSimp
 - **Go/Stop** — human modal (`GoStopModal`); AI auto-decides by difficulty (`goStop.ts`)
 - **Result screen** — `app/result.tsx` with breakdown + play again
 - **Collected pile UI** — `CollectedPileView` for human + AI (`pile` card size 32×52pt)
-- **Fan hand layout** — `HandFanView` with rotation + overlap
+- **Fan hand layout** — `HandFanView` with rotation + overlap; **horizontal scroll** when fan width exceeds viewport (narrow phones / many cards)
 - Compact game header (back + turn hint; setup badges moved to deck row)
 - Deck count, last-flipped preview, status messages
-- **Sound + haptics** — per-step effects synced to animation steps (`useTurnAnimation`); haptic on collect
+- **Sound + haptics** — `playCard` / `flipCard` per animation step (`useTurnAnimation`); haptic on collect step; **yaku** sound + success haptic on human yaku complete
+- **Yaku callout** — `yaku.ts` detects 3rd godori·홍단·청단·초단 card; `YakuCalloutOverlay` (dim backdrop, gold banner, per-yaku accent); queued if multiple complete in one turn
 - **Card motion (Phase 3)** — sequenced play → flip → collect via `turnSteps.ts`, `FlyingCard`, `TurnAnimationOverlay`, `LayoutAnchor`; `isAnimating` input lock
 - **Special moves (Phase 4)** — `SpecialMoveBar` (흔들기/폭탄); engine awards bonus pi for 쪽·따닥·싹쓸이·뻑·싼 것
 - **September cup** — `SepCupModal` on collecting `sep-animal-double`
@@ -535,6 +548,21 @@ When score ≥ target, block further play until decision:
 │  reach target first      │
 └──────────────────────────┘
 ```
+
+### Yaku completion callout ✅
+
+When the **human** completes a scoring yaku hand (3rd card of godori, hongdan, cheongdan, or chodan), after the turn resolves:
+
+| Piece | Role |
+|-------|------|
+| `countYakuProgress` (`scoring.ts`) | Counts card `flags` (godori, hongdan, cheongdan, chodan) |
+| `detectHumanYakuCompletion` (`yaku.ts`) | Before/after collected diff → types that crossed **&lt;3 → ≥3** |
+| `useMatgoGame` | `yakuQueue` + `activeYaku`; runs on every `dispatchAnimated` before/after |
+| `YakuCalloutOverlay` | Full-screen dim + animated banner; accent per type (gold / red / blue / cream) |
+| `useGameSounds` | `gather-long.mp3` as `yaku` effect (no longer on collect animation step) |
+| `translations.ts` | `game.yaku.godori` · `hongdan` · `cheongdan` · `chodan` (EN/KO) |
+
+AI yaku completions do not show the callout (human celebration only). Scoring still uses the same flags in `calculateScore`.
 
 ---
 
@@ -614,21 +642,26 @@ Use `withSpring` for land; `withTiming` for flight. Collected pile: cards shrink
 
 ### Audio & haptics sync
 
-Existing `GameSoundEffect`: `playCard`, `flipCard`, `collect` — map 1:1 to animation step `onStart` / `onComplete`. Haptics on collect step when enabled.
+`GameSoundEffect`: `playCard`, `flipCard` — map to animation steps via `soundForStep` in `turnSteps.ts` (collect step has no sound). Separate **`yaku`** effect (`gather-long.mp3`) + success haptic when human completes godori·단. Haptics on collect animation step when enabled.
 
 ### New modules (implemented)
 
 ```
 src/
+  audio/
+    useGameSounds.ts       # expo-audio players for play / flip / yaku
   game/
     turnSteps.ts           # TurnStep types + buildTurnSteps + applyVisualStep
+    yaku.ts                # yaku completion detection for callout
     useTurnAnimation.ts    # animation queue + displayGame + per-step sound/haptics
+    useMatgoGame.ts        # yaku queue + enqueue on human turn
   components/
     FlyingCard.tsx         # Reanimated overlay card
     TurnAnimationOverlay.tsx
+    YakuCalloutOverlay.tsx # yaku celebration overlay
     LayoutAnchor.tsx       # onLayout anchor registry for flight paths
   i18n/
-    translations.ts        # EN/KO string catalog
+    translations.ts        # EN/KO string catalog (+ game.yaku.*)
     useTranslation.ts      # hook wired to Settings language
 ```
 
@@ -640,7 +673,7 @@ src/
 - [x] AI turns use the same motion (mirrored)
 - [x] No double-tap or illegal plays while `isAnimating`
 - [x] 뻑: flip stacks on table without collect flight
-- [x] Sounds align with each step
+- [x] Sounds align with play and flip animation steps
 
 ### Phase placement
 
@@ -660,6 +693,8 @@ type AiDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 type GameMode = 'matgo' | 'gostop' | 'hwatu';
 type AppLanguage = 'en' | 'ko';
 type SepCupRole = 'animal' | 'junk';
+type GameSoundEffect = 'playCard' | 'flipCard' | 'yaku';
+type YakuType = 'godori' | 'hongdan' | 'cheongdan' | 'chodan';
 
 interface CardDefinition { /* id, month, type, piValue, labels, flags */ }
 interface AppSettings { language, defaultAiDifficulty, defaultGameMode, soundEnabled, hapticsEnabled }
@@ -680,7 +715,7 @@ interface MatgoGameState {
 }
 ```
 
-**Phase 4 complete** — 3P gostop, hwatu simple, advanced rules, settlement, sep cup choice.
+**Phase 4 complete** — 3P gostop, hwatu simple, advanced rules, settlement, sep cup choice. **Post-Phase 4 polish** — yaku callout overlay, gather-long on yaku, hand horizontal scroll.
 
 ---
 
@@ -713,7 +748,7 @@ interface MatgoGameState {
   - `scripts/verify-matgo-deal.ts` — 100-seed invariant check
 - [x] Table layout + hand UI — playable board in `app/game.tsx`
   - [x] `CollectedPileView` — 70/30 tray; left 광·띠·열끗 cascade; right 피 5/row overlap stack
-  - [x] `HandFanView` — fan arc with rotation + overlap
+  - [x] `HandFanView` — fan arc with rotation + overlap; horizontal scroll when overflow
   - [x] Compact game header; live score + Go count display
 - [x] Turn engine: play → flip → collect (human + AI turns)
   - `turnEngine.ts` — hand play, deck flip, month matching, collection
@@ -726,7 +761,7 @@ interface MatgoGameState {
 - [x] Scoring engine — all yaku + Go modifiers (`scoring.ts`, `scripts/verify-scoring.ts`)
 - [x] Go/Stop — human modal (`GoStopModal`); AI auto-decision by difficulty
 - [x] Result screen (`app/result.tsx` — win/loss, breakdown, settlement, nagari multiplier, play again)
-- [x] Sound + haptics (collect haptic; turn animations deferred to Phase 3)
+- [x] Sound + haptics (collect step haptic; turn step sounds play/flip; yaku sound + haptic on human yaku complete)
 
 ### Phase 3 — Polish ✅
 
@@ -734,8 +769,10 @@ interface MatgoGameState {
   - [x] Play hand: slide hand → table
   - [x] Flip deck: lift + flip → table
   - [x] Collect: slide matched cards → `CollectedPileView`
-  - [x] AI parity + `isAnimating` input lock + per-step sound/haptics
+  - [x] AI parity + `isAnimating` input lock + per-step sound/haptics (play/flip; no collect sound)
   - [x] `TurnStep` / `FlyingCard` presentation layer
+- [x] **Yaku celebration** — `yaku.ts` + `YakuCalloutOverlay` + `gather-long.mp3` on human godori·단 complete
+- [x] **Hand scroll** — `HandFanView` horizontal scroll on narrow screens / large hands
 - [ ] Deal animation (optional — cards fly from deck to hand/table on new hand) — deferred
 - [x] AI tuning per difficulty (lookahead, mistake rate, Go/Stop policy) — Phase 2 baseline; shake/bomb in Phase 4
 - [x] i18n (EN/KO) + Rules screen content (`src/i18n/`, localized Home/Setup/Settings/Game/Rules)
@@ -798,9 +835,9 @@ interface MatgoGameState {
 - [x] Score matches manual calculation for all yaku
 - [x] Human Go/Stop modal at target; AI decides Go/Stop without blocking UI
 - [x] Result screen shows win/loss vs AI
-- [x] Fan hand layout (`HandFanView`)
+- [x] Fan hand layout (`HandFanView`); horizontal scroll when hand overflows viewport
 - [x] Pre-play specials (4월 auto-win, 3-card stack, redeal)
-- [x] Sound effects + haptic on collect (per-step with animations)
+- [x] Sound effects (play/flip per step) + haptic on collect animation step
 
 ## Acceptance Criteria — Phase 3 ✅
 
@@ -810,7 +847,7 @@ interface MatgoGameState {
 - [x] AI turns use identical animation queue (mirrored anchors)
 - [x] Input locked during `isAnimating` (no double-tap / illegal plays)
 - [x] 뻑 stack: flip lands on table pair without collect flight
-- [x] Sound/haptics fire per animation step (not batch after state snap)
+- [x] Sound/haptics fire per animation step (play/flip); yaku uses separate gather-long cue
 - [x] EN/KO i18n across Home, Setup, Settings, Game, Rules
 - [x] Rules screen with localized content (7 sections)
 
@@ -830,6 +867,14 @@ interface MatgoGameState {
 - [x] Result screen: settlement chips, 고박·피박·광박 flags, nagari next-hand multiplier
 - [x] `verify-matgo-deal.ts`, `verify-scoring.ts`, `verify-turn-engine.ts` pass
 
+## Acceptance Criteria — Post-Phase 4 polish ✅
+
+- [x] Human completing godori / hongdan / cheongdan / chodan shows full-screen callout (EN/KO label)
+- [x] `gather-long.mp3` plays on yaku complete (not on generic collect animation)
+- [x] Multiple yaku in one turn queue sequentially in overlay
+- [x] Human hand scrolls horizontally when fan exceeds screen width (e.g. Galaxy narrow viewport)
+- [x] Collected pile 피 rows remain overlap stack (5/row); 광·띠·열끗 rows keep horizontal scroll
+
 ---
 
 ## References
@@ -843,4 +888,4 @@ interface MatgoGameState {
 
 ## Next Step
 
-**Phase 5 — Release** — EAS Build (Android → iOS), Play Store / App Store listing. Optional polish: deal animation, bonus/joker card art + engine support.
+**Phase 5 — Release** — EAS Build (Android → iOS), Play Store / App Store listing. Optional polish: deal animation, bonus/joker card art + engine support. Recent UX polish (yaku callout, hand scroll, sound remap) is **done**.
