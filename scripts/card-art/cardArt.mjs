@@ -243,12 +243,6 @@ export const CARD_ART = {
     ${pampasGrass(300, 660, 1.1)}
   `)),
 
-  'aug-ribbon': () => wrapSvg(baseCard(`
-    ${pampasGrass(300, 380, 1.3)}
-    ${ribbonChodan()}
-    ${pampasGrass(300, 620, 1.0)}
-  `)),
-
   'aug-junk-1': () => wrapSvg(baseCard(`
     ${pampasGrass(280, 420, 1.6)}
     ${pampasGrass(360, 440, 1.4)}
@@ -256,8 +250,14 @@ export const CARD_ART = {
     ${pampasGrass(400, 590, 1.1)}
   `)),
 
+  'aug-junk-2': () => wrapSvg(baseCard(`
+    ${pampasGrass(300, 440, 1.7)}
+    ${pampasGrass(220, 580, 1.2)}
+    ${pampasGrass(380, 590, 1.2)}
+  `)),
+
   // ── September (Chrysanthemum) ──
-  'sep-animal-double': () => wrapSvg(baseCard(`
+  'sep-junk-double': () => wrapSvg(baseCard(`
     ${chrysanthemum(300, 360, 1.5)}
     ${sakeCup(300, 580, 1.6)}
     ${chrysanthemum(180, 480, 1.0)}
@@ -302,9 +302,11 @@ export const CARD_ART = {
     ${mapleLeaves(240, 620, 3, 1.1)}
   `)),
 
-  'oct-junk-3': () => wrapSvg(baseCard(`
-    ${mapleLeaves(300, 440, 6, 1.8)}
-    ${branchLine(200, 660, 400, 640, 5)}
+  'oct-ribbon': () => wrapSvg(baseCard(`
+    ${mapleLeaves(300, 320, 4, 1.3)}
+    ${ribbonCheongdan()}
+    ${mapleLeaves(200, 620, 3, 1.1)}
+    ${mapleLeaves(400, 630, 3, 1.1)}
   `)),
 
   // ── November (Willow) ──

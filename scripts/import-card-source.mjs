@@ -4,6 +4,7 @@
  * into assets/cards/master/*.png at 512×839, then runs size generation.
  */
 import { mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -57,9 +58,8 @@ const SOURCE_ENTRIES = [
 
   ['500px-Hwatu_August_Tane.svg.webp', 'aug-animal'],
   ['500px-Hwatu_August_Hikari.svg.webp', 'aug-bright'],
-  // No August Tanzaku in Wikimedia Hwatu set — reuse July plain ribbon (same 초단 type)
-  ['500px-Hwatu_July_Tanzaku.svg.webp', 'aug-ribbon'],
   ['500px-Hwatu_August_Kasu_1.svg.webp', 'aug-junk-1'],
+  ['500px-Hwatu_August_Kasu_2.svg.webp', 'aug-junk-2'],
 
   ['500px-Hwatu_September_Tane.svg.webp', 'sep-junk-double'],
   ['500px-Hwatu_September_Tanzaku.svg.webp', 'sep-ribbon'],
@@ -94,7 +94,7 @@ const EXPECTED_IDS = [
   'may-animal', 'may-ribbon', 'may-junk-1', 'may-junk-2',
   'jun-animal', 'jun-ribbon', 'jun-junk-1', 'jun-junk-2',
   'jul-animal', 'jul-ribbon', 'jul-junk-1', 'jul-junk-2',
-  'aug-animal', 'aug-bright', 'aug-ribbon', 'aug-junk-1',
+  'aug-animal', 'aug-bright', 'aug-junk-1', 'aug-junk-2',
   'sep-junk-double', 'sep-ribbon', 'sep-junk-1', 'sep-junk-2',
   'oct-animal', 'oct-junk-1', 'oct-junk-2', 'oct-ribbon',
   'nov-bright', 'nov-junk-1', 'nov-junk-2', 'nov-junk-double',
@@ -134,7 +134,13 @@ async function main() {
   await sharp(backSrc).resize(WIDTH, HEIGHT).png().toFile(join(BACK, 'card-back@3x.png'));
   console.log(`✓ ${BACK_SOURCE} → card-back.png`);
 
-  const missing = EXPECTED_IDS.filter((id) => !produced.has(id));
+  const missing = EXPECTED_IDS.filter((id) => {
+    if (produced.has(id)) {
+      return false;
+    }
+    const masterPath = join(MASTER, `${id}.png`);
+    return !existsSync(masterPath);
+  });
   if (missing.length) {
     console.error('\nMissing cards:', missing.join(', '));
     process.exit(1);

@@ -16,7 +16,7 @@ import {
   getBombCardIds,
 } from './specialMoves';
 
-const SEP_CUP_ID = 'sep-animal-double';
+const SEP_CUP_ID = 'sep-junk-double';
 
 function removeFromHand(player: PlayerState, handCardId: CardId): PlayerState {
   const handIndex = player.hand.indexOf(handCardId);

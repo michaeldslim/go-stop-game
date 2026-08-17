@@ -70,20 +70,14 @@ export const CARD_CATALOG: CardDefinition[] = [
   makeCard(7, 'junk-1', 'junk', { en: 'Clover Junk', ko: '싸리 피' }),
   makeCard(7, 'junk-2', 'junk', { en: 'Clover Junk', ko: '싸리 피' }),
 
-  // August
-  makeCard(8, 'animal', 'animal', { en: 'Geese', ko: '고도리' }, { flags: { godori: true } }),
+  // August — 광, 열끗(기러기), 피×2 (띠 없음)
   makeCard(8, 'bright', 'bright', { en: 'Moon Bright', ko: '달밝음' }),
-  makeCard(8, 'ribbon', 'ribbon', { en: 'Plain Ribbon', ko: '초단 띠' }, { flags: { chodan: true } }),
+  makeCard(8, 'animal', 'animal', { en: 'Geese', ko: '고도리' }, { flags: { godori: true } }),
   makeCard(8, 'junk-1', 'junk', { en: 'Pampas Junk', ko: '억새 피' }),
+  makeCard(8, 'junk-2', 'junk', { en: 'Pampas Junk', ko: '억새 피' }),
 
   // September — cup can be scored as 열끗 or 쌍피 (+2)
-  makeCard(
-    9,
-    'animal-double',
-    'animal',
-    { en: 'Chrysanthemum Cup', ko: '국화잔' },
-    { flags: { flexPiAnimal: true }, piValue: 2 },
-  ),
+  { ...makeCard(9, 'junk-double', 'animal', { en: 'Chrysanthemum Cup', ko: '국화잔' }, { flags: { flexPiAnimal: true } }), piValue: 2 },
   makeCard(9, 'ribbon', 'ribbon', { en: 'Plain Ribbon', ko: '초단 띠' }, { flags: { chodan: true } }),
   makeCard(9, 'junk-1', 'junk', { en: 'Chrysanthemum Junk', ko: '국화 피' }),
   makeCard(9, 'junk-2', 'junk', { en: 'Chrysanthemum Junk', ko: '국화 피' }),
@@ -92,7 +86,7 @@ export const CARD_CATALOG: CardDefinition[] = [
   makeCard(10, 'animal', 'animal', { en: 'Deer', ko: '사슴' }),
   makeCard(10, 'junk-1', 'junk', { en: 'Maple Junk', ko: '단풍 피' }),
   makeCard(10, 'junk-2', 'junk', { en: 'Maple Junk', ko: '단풍 피' }),
-  makeCard(10, 'junk-3', 'junk', { en: 'Maple Junk', ko: '단풍 피' }),
+  makeCard(10, 'ribbon', 'junk', { en: 'Maple Junk', ko: '단풍 피' }),
 
   // November — phoenix is the month bright (봉황 광), not 열끗
   makeCard(11, 'bright', 'bright', { en: 'Phoenix Bright', ko: '봉황광' }),
@@ -108,7 +102,7 @@ export const CARD_CATALOG: CardDefinition[] = [
     'ribbon',
     'ribbon',
     { en: 'Rain Ribbon', ko: '초단 띠' },
-    { flags: { excludeRibbonCount: true } },
+    { flags: { chodan: true, excludeRibbonCount: true } },
   ),
   { ...makeCard(12, 'junk-double', 'junk', { en: 'Double Junk', ko: '쌍피' }), piValue: 2 },
 ];

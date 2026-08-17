@@ -21,7 +21,7 @@ function resolveFlexRole(
   cardId: CardId,
   flexCardRoles: Partial<Record<CardId, SepCupRole>>,
 ): SepCupRole | null {
-  if (cardId === 'sep-animal-double') {
+  if (cardId === 'sep-junk-double') {
     return flexCardRoles[cardId] ?? 'animal';
   }
   return null;

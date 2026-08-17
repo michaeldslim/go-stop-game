@@ -51,7 +51,7 @@ export interface PlayerState {
   bonusPi: number;
   /** 2× from 흔들기 or 폭탄 when player wins */
   scoreMultiplier: number;
-  /** Role for sep-animal-double (국화잔) — defaults to animal until chosen */
+  /** Role for sep-junk-double (국화잔) — defaults to animal until chosen */
   sepCupRole: SepCupRole | null;
   /** Per-card flex role overrides (sep cup) */
   flexCardRoles: Partial<Record<CardId, SepCupRole>>;

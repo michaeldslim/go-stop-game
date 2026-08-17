@@ -36,7 +36,7 @@ const cheongdan = ['apr-ribbon', 'may-ribbon', 'jun-ribbon'];
 assert(calculateScore(cheongdan).cheongdan === 3, 'cheongdan should score 3');
 
 // Chodan (Jul, Aug, Sep)
-const chodan = ['jul-ribbon', 'aug-ribbon', 'sep-ribbon'];
+const chodan = ['jul-ribbon', 'sep-ribbon', 'dec-ribbon'];
 assert(calculateScore(chodan).chodan === 3, 'chodan should score 3');
 
 // 10 pi = 1, each extra +1

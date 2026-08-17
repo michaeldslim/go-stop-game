@@ -18,6 +18,8 @@ export interface CardDefinition {
     hongdan?: boolean;
     cheongdan?: boolean;
     chodan?: boolean;
+    /** September cup — scored as 열끗 or 쌍피 (+2 pi) at collection */
+    flexPiAnimal?: boolean;
     /** December 초단 — scored as ribbon art only; not counted toward 띠 totals */
     excludeRibbonCount?: boolean;
   };
