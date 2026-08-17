@@ -22,7 +22,7 @@ import {
   playHandCard,
 } from './turnEngine';
 import { declareBomb, declareShake, canDeclareBomb, canDeclareShake } from './specialMoves';
-import { buildTurnSteps } from './turnSteps';
+import { AI_TURN_DELAY_MS, buildTurnSteps } from './turnSteps';
 import { detectHumanYakuCompletion, type YakuType } from './yaku';
 import { useTurnAnimation } from './useTurnAnimation';
 import type { AiDifficulty, GameMode } from '../types/game';
@@ -308,7 +308,7 @@ export function useMatgoGame(
 
     const timer = setTimeout(() => {
       void dispatchAnimated({ type: 'AI_TURN' });
-    }, 700);
+    }, AI_TURN_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, [game, isAnimating, dispatchAnimated]);

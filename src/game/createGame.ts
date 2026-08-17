@@ -82,8 +82,13 @@ function dealForMode(mode: GameMode, shuffledDeck: string[], dealerIndex: number
   }
 }
 
-function playerCountForMode(mode: GameMode): number {
-  return mode === 'gostop' ? GOSTOP_PLAYER_COUNT : 2;
+/** Human (index 0) is always dealer in 2P; 3P gostop uses a dealer draw. */
+function resolveDealerIndex(mode: GameMode, deck: string[]): number {
+  if (mode !== 'gostop') {
+    return 0;
+  }
+
+  return chooseDealer(deck, GOSTOP_PLAYER_COUNT).dealerIndex;
 }
 
 export function createGame({
@@ -92,11 +97,9 @@ export function createGame({
   handMultiplier = 1,
   rng = defaultRng,
 }: CreateGameOptions): MatgoGameState {
-  const count = playerCountForMode(mode);
-
   for (let attempt = 0; attempt < MAX_REDEALS; attempt += 1) {
-    const initialDeck = shuffleDeck(createDeck(), rng);
-    const { dealerIndex } = chooseDealer(initialDeck, count);
+    const dealerDeck = mode === 'gostop' ? shuffleDeck(createDeck(), rng) : [];
+    const dealerIndex = resolveDealerIndex(mode, dealerDeck);
     const shuffledDeck = shuffleDeck(createDeck(), rng);
     const deal = dealForMode(mode, shuffledDeck, dealerIndex);
     let state = buildGameState(mode, aiDifficulty, deal, handMultiplier);
@@ -142,8 +145,8 @@ export function createGame({
     return state;
   }
 
-  const fallbackDeck = shuffleDeck(createDeck(), rng);
-  const { dealerIndex } = chooseDealer(fallbackDeck, count);
+  const dealerDeck = mode === 'gostop' ? shuffleDeck(createDeck(), rng) : [];
+  const dealerIndex = resolveDealerIndex(mode, dealerDeck);
   const shuffledDeck = shuffleDeck(createDeck(), rng);
   return buildGameState(mode, aiDifficulty, dealForMode(mode, shuffledDeck, dealerIndex), handMultiplier);
 }

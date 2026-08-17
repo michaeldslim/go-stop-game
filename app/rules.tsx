@@ -24,7 +24,6 @@ export default function RulesScreen() {
             <Text style={styles.ruleBody}>{t(section.body)}</Text>
           </View>
         ))}
-        <Text style={styles.credit}>{t('rules.credit')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -69,12 +68,5 @@ const styles = StyleSheet.create({
     color: colors.cream,
     fontSize: 15,
     lineHeight: 22,
-  },
-  credit: {
-    color: colors.cream,
-    opacity: 0.6,
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 8,
   },
 });

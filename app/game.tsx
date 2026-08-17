@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCardById } from '../src/cards/getCardById';
@@ -8,7 +9,7 @@ import { GoStopModal } from '../src/components/GoStopModal';
 import { HandFanView } from '../src/components/HandFanView';
 import { LayoutAnchor, LayoutAnchorProvider, anchorKeys, useLayoutAnchors } from '../src/components/LayoutAnchor';
 import { SepCupModal } from '../src/components/SepCupModal';
-import { SpecialMoveBar } from '../src/components/SpecialMoveBar';
+import { SpecialMoveModal } from '../src/components/SpecialMoveModal';
 import { TurnAnimationOverlay } from '../src/components/TurnAnimationOverlay';
 import { YakuCalloutOverlay } from '../src/components/YakuCalloutOverlay';
 import {
@@ -147,12 +148,80 @@ function GameScreenContent() {
     dismissYakuCallout,
   } = useMatgoGame(mode, difficulty, handMultiplier);
 
+  const [showSpecialMoveModal, setShowSpecialMoveModal] = useState(false);
+  const specialMoveDismissedRef = useRef(false);
+  const isFirstSpecialMovePromptRef = useRef(true);
+  const specialMoveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const human = game.players.find((player) => player.isHuman) ?? game.players[0];
   const humanIndex = game.players.findIndex((player) => player.isHuman);
   const opponents = game.players.filter((player) => !player.isHuman);
   const playableSet = new Set(playableHandCardIds);
   const hiddenCards = inFlightCardId ? new Set([inFlightCardId]) : undefined;
   const difficultyLabel = getLocalizedText(language, difficultyOption.labels);
+  const hasSpecialMoves = canShake || canBomb;
+  const bombDeclared =
+    humanIndex >= 0 && game.players[humanIndex].scoreMultiplier > 1 && canBomb;
+
+  useEffect(() => {
+    if (specialMoveTimerRef.current) {
+      clearTimeout(specialMoveTimerRef.current);
+      specialMoveTimerRef.current = null;
+    }
+
+    if (!isHumanTurn || !hasSpecialMoves) {
+      specialMoveDismissedRef.current = false;
+      setShowSpecialMoveModal(false);
+      return;
+    }
+
+    if (specialMoveDismissedRef.current) {
+      return;
+    }
+
+    const handReady = human.hand.length > 0 && !isAnimating;
+    if (isFirstSpecialMovePromptRef.current && !handReady) {
+      return;
+    }
+
+    const delayMs = isFirstSpecialMovePromptRef.current ? 1500 : 0;
+
+    specialMoveTimerRef.current = setTimeout(() => {
+      isFirstSpecialMovePromptRef.current = false;
+      if (!specialMoveDismissedRef.current) {
+        setShowSpecialMoveModal(true);
+      }
+    }, delayMs);
+
+    return () => {
+      if (specialMoveTimerRef.current) {
+        clearTimeout(specialMoveTimerRef.current);
+        specialMoveTimerRef.current = null;
+      }
+    };
+  }, [isHumanTurn, hasSpecialMoves, canShake, canBomb, human.hand.length, isAnimating]);
+
+  const closeSpecialMoveModal = () => {
+    specialMoveDismissedRef.current = true;
+    setShowSpecialMoveModal(false);
+  };
+
+  const handleShake = () => {
+    closeSpecialMoveModal();
+    callShake();
+  };
+
+  const handleBomb = () => {
+    if (bombDeclared) {
+      closeSpecialMoveModal();
+      callBomb();
+      return;
+    }
+
+    callBomb();
+    specialMoveDismissedRef.current = false;
+    setShowSpecialMoveModal(true);
+  };
 
   if (game.phase === 'finished') {
     return (
@@ -170,6 +239,16 @@ function GameScreenContent() {
         <Pressable onPress={() => router.back()} hitSlop={8} disabled={isAnimating}>
           <Text style={styles.back}>{t('game.leave')}</Text>
         </Pressable>
+        {hasSpecialMoves && isHumanTurn ? (
+          <Pressable
+            onPress={() => setShowSpecialMoveModal(true)}
+            hitSlop={8}
+            disabled={isAnimating}
+            style={styles.specialMovesButton}
+          >
+            <Text style={styles.specialMovesButtonText}>{t('game.specialMoves')}</Text>
+          </Pressable>
+        ) : null}
         <Text style={styles.turnHint} numberOfLines={1}>
           {game.phase === 'goStopPrompt'
             ? t('game.goStop')
@@ -191,15 +270,6 @@ function GameScreenContent() {
           void remeasureAll();
         }}
       >
-        <SpecialMoveBar
-          language={language}
-          canShake={canShake}
-          canBomb={canBomb}
-          onShake={callShake}
-          onBomb={callBomb}
-          disabled={!isHumanTurn || isAnimating}
-        />
-
         <View style={styles.topHandDock}>
           {opponents.map((opponent) => {
             const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
@@ -331,6 +401,17 @@ function GameScreenContent() {
         </View>
       </ScrollView>
 
+      <SpecialMoveModal
+        visible={showSpecialMoveModal}
+        language={language}
+        canShake={canShake}
+        canBomb={canBomb}
+        bombDeclared={bombDeclared}
+        onShake={handleShake}
+        onBomb={handleBomb}
+        onClose={closeSpecialMoveModal}
+      />
+
       <GoStopModal
         visible={showGoStopModal}
         score={human.score}
@@ -379,7 +460,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    gap: 12,
+    gap: 8,
+  },
+  specialMovesButton: {
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  specialMovesButtonText: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
   },
   back: {
     color: colors.gold,

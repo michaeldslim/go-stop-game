@@ -39,7 +39,10 @@ export default function HomeScreen() {
           contentFit="contain"
           accessibilityLabel="August bright hwatu card"
         />
-        <Text style={styles.title}>{t('home.title')}</Text>
+        <View style={styles.titleGroup}>
+          <Text style={styles.title}>{t('home.title')}</Text>
+          <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
+        </View>
       </View>
 
       <View style={styles.actions}>
@@ -81,11 +84,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderRadius: CARD_BORDER_RADIUS,
   },
+  titleGroup: {
+    alignItems: 'center',
+    gap: 4,
+  },
   title: {
     fontSize: 48,
     fontWeight: '700',
     color: colors.gold,
     letterSpacing: 2,
+  },
+  subtitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: colors.cream,
+    opacity: 0.85,
+    letterSpacing: 6,
   },
   actions: {
     gap: 12,
@@ -117,7 +131,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tertiaryButton: {
-    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
   tertiaryButtonText: {

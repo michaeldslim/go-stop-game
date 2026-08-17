@@ -25,7 +25,11 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScreenHeader title={t('settings.title')} onBack={() => router.back()} />
+      <ScreenHeader
+        title={t('settings.title')}
+        onBack={() => router.back()}
+        backLabel={t('common.back')}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <OptionPicker<AppLanguage>

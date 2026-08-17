@@ -14,9 +14,12 @@ export const STEP_TIMING = {
   flipDeck: 300,
   collect: 350,
   stack: 200,
-  pauseAfterPlay: 150,
+  pauseAfterPlay: 200,
+  pauseBeforeCollect: 500,
   stagger: 50,
 } as const;
+
+export const AI_TURN_DELAY_MS = 1200;
 
 function findRemovedFromHand(beforeHand: CardId[], afterHand: CardId[]): CardId | null {
   for (const cardId of beforeHand) {
@@ -107,9 +110,30 @@ function reconstructTableAfterHandPlay(
     .filter((tableCard): tableCard is TableCard => tableCard !== null);
 }
 
-function resolveHandPlayTargetIndex(before: MatgoGameState, handCollect: CardId[]): number {
+function findTableCardIndex(table: TableCard[], cardId: CardId): number | null {
+  for (let index = 0; index < table.length; index += 1) {
+    if (expandTableCard(table[index]).includes(cardId)) {
+      return index;
+    }
+  }
+  return null;
+}
+
+function resolveHandPlayTargetIndex(
+  before: MatgoGameState,
+  playedCard: CardId,
+  handCollect: CardId[],
+): number {
   if (handCollect.length === 0) {
     return before.table.length;
+  }
+
+  const tableCollected = handCollect.filter((cardId) => cardId !== playedCard);
+  for (const cardId of tableCollected) {
+    const index = findTableCardIndex(before.table, cardId);
+    if (index !== null) {
+      return index;
+    }
   }
 
   const matchedIndex = findCollectedPileIndex(before.table, handCollect);
@@ -117,12 +141,10 @@ function resolveHandPlayTargetIndex(before: MatgoGameState, handCollect: CardId[
     return matchedIndex;
   }
 
-  const month = handCollect[0] ? getCardMonth(handCollect[0]) : null;
-  if (month) {
-    const matchIndices = findTableMatchIndices(before.table, month);
-    if (matchIndices.length > 0) {
-      return matchIndices[0];
-    }
+  const month = getCardMonth(playedCard);
+  const matchIndices = findTableMatchIndices(before.table, month);
+  if (matchIndices.length > 0) {
+    return matchIndices[0];
   }
 
   return before.table.length;
@@ -138,6 +160,14 @@ function resolveFlipDeckTargetIndex(
   const matchIndices = findTableMatchIndices(tableBeforeFlip, month);
 
   if (flipCollect.length > 0) {
+    const tableCollected = flipCollect.filter((cardId) => cardId !== flippedCard);
+    for (const cardId of tableCollected) {
+      const index = findTableCardIndex(tableBeforeFlip, cardId);
+      if (index !== null) {
+        return index;
+      }
+    }
+
     const matchedIndex = findCollectedPileIndex(tableBeforeFlip, flipCollect);
     if (matchedIndex !== null) {
       return matchedIndex;
@@ -191,7 +221,7 @@ export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): T
     : [];
   const tableBeforeFlip = reconstructTableAfterHandPlay(before, playedCard, handCollect);
   const stackPuk = flippedCard ? isStackPuk(before, after, flippedCard) : false;
-  const handPlayTargetIndex = resolveHandPlayTargetIndex(before, handCollect);
+  const handPlayTargetIndex = resolveHandPlayTargetIndex(before, playedCard, handCollect);
 
   steps.push({
     type: 'playHand',
@@ -201,6 +231,7 @@ export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): T
   });
 
   if (handCollect.length > 0) {
+    steps.push({ type: 'pause', durationMs: STEP_TIMING.pauseBeforeCollect });
     steps.push({
       type: 'collect',
       cardIds: handCollect,
@@ -226,6 +257,7 @@ export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): T
     });
 
     if (flipCollect.length > 0) {
+      steps.push({ type: 'pause', durationMs: STEP_TIMING.pauseBeforeCollect });
       steps.push({
         type: 'collect',
         cardIds: flipCollect,

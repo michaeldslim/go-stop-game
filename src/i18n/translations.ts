@@ -2,6 +2,7 @@ import type { AppLanguage } from '../types/game';
 
 export type TranslationKey =
   | 'home.title'
+  | 'home.subtitle'
   | 'home.play'
   | 'home.howToPlay'
   | 'home.settings'
@@ -38,9 +39,9 @@ export type TranslationKey =
   | 'game.yaku.hongdan'
   | 'game.yaku.cheongdan'
   | 'game.yaku.chodan'
+  | 'game.specialMoves'
   | 'rules.title'
   | 'rules.back'
-  | 'rules.credit'
   | 'rules.deck.title'
   | 'rules.deck.body'
   | 'rules.setup.title'
@@ -88,6 +89,7 @@ type TranslationParams = Record<string, string | number>;
 
 const en: Record<TranslationKey, string> = {
   'home.title': 'Hwatu',
+  'home.subtitle': '화투',
   'home.play': 'Play',
   'home.howToPlay': 'How to Play',
   'home.settings': 'Settings',
@@ -124,9 +126,9 @@ const en: Record<TranslationKey, string> = {
   'game.yaku.hongdan': 'Hongdan!',
   'game.yaku.cheongdan': 'Cheongdan!',
   'game.yaku.chodan': 'Chodan!',
+  'game.specialMoves': 'Special',
   'rules.title': 'How to Play',
   'rules.back': '← Back',
-  'rules.credit': 'Rules based on the 도까함 Go-Stop guide and Instructables.',
   'rules.deck.title': 'The Deck',
   'rules.deck.body':
     'Hwatu has 48 cards — 4 per month. Match by month (same flower). Types: Bright (광), Animal (열끗), Ribbon (띠), Junk (피). 25 pi total including 3 쌍피 (double junk).',
@@ -182,6 +184,7 @@ const en: Record<TranslationKey, string> = {
 
 const ko: Record<TranslationKey, string> = {
   'home.title': 'Hwatu',
+  'home.subtitle': '화투',
   'home.play': '플레이',
   'home.howToPlay': '게임 방법',
   'home.settings': '설정',
@@ -198,7 +201,7 @@ const ko: Record<TranslationKey, string> = {
   'settings.hapticsDesc': '매칭 및 고 선언 시 진동',
   'settings.credit': '카드 아트: Wikimedia Commons (CC BY-SA 4.0)',
   'game.leave': '← 나가기',
-  'game.yourTurn': '당신 차례',
+  'game.yourTurn': '플레이어 차례',
   'game.aiTurn': 'AI 차례…',
   'game.goStop': '고 / 스톱',
   'game.loadingResults': '결과로 이동 중…',
@@ -218,9 +221,9 @@ const ko: Record<TranslationKey, string> = {
   'game.yaku.hongdan': '홍단!',
   'game.yaku.cheongdan': '청단!',
   'game.yaku.chodan': '초단!',
+  'game.specialMoves': '특수',
   'rules.title': '게임 방법',
   'rules.back': '← 뒤로',
-  'rules.credit': '도까함 고스톱 가이드와 Instructables를 참고했습니다.',
   'rules.deck.title': '화투 덱',
   'rules.deck.body':
     '화투는 48장 — 월별 4장. 같은 꽃(월)로 매칭합니다. 종류: 광, 열끗, 띠, 피. 쌍피 3장 포함 총 25피.',
