@@ -86,5 +86,6 @@ export const anchorKeys = {
   hand: (playerIndex: number, cardId: string) => `hand-${playerIndex}-${cardId}`,
   aiHand: (playerIndex: number) => `ai-hand-${playerIndex}`,
   table: (index: number) => `table-${index}`,
+  tableCenter: 'table-center',
   pile: (playerIndex: number) => `pile-${playerIndex}`,
 };

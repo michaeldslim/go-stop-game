@@ -1,13 +1,12 @@
-import type { CardId, MatgoGameState } from '../types/gameState';
-import { expandTableCard } from './tableCards';
+import type { CardId, MatgoGameState, TableCard } from '../types/gameState';
+import { addTableCard, expandTableCard, findTableMatchIndices, getCardMonth } from './tableCards';
 import { cloneGameState } from './gameUtils';
-import { addTableCard } from './tableCards';
 
 export type TurnStep =
-  | { type: 'playHand'; cardId: CardId; playerIndex: number }
+  | { type: 'playHand'; cardId: CardId; playerIndex: number; targetTableIndex: number }
   | { type: 'collect'; cardIds: CardId[]; playerIndex: number }
-  | { type: 'flipDeck'; cardId: CardId }
-  | { type: 'stack'; flippedCardId: CardId }
+  | { type: 'flipDeck'; cardId: CardId; targetTableIndex: number }
+  | { type: 'stack'; flippedCardId: CardId; targetTableIndex: number }
   | { type: 'pause'; durationMs: number };
 
 export const STEP_TIMING = {
@@ -71,11 +70,90 @@ function handMatchCollectIds(
   return [playedCard, ...removedFromTable.filter((cardId) => collected.includes(cardId))];
 }
 
-function flipCollectIds(flippedCard: CardId, collected: CardId[]): CardId[] {
-  if (!collected.includes(flippedCard)) {
-    return [];
+function findCollectedPileIndex(table: TableCard[], collectedIds: CardId[]): number | null {
+  for (let index = 0; index < table.length; index += 1) {
+    const ids = expandTableCard(table[index]);
+    if (ids.some((cardId) => collectedIds.includes(cardId))) {
+      return index;
+    }
   }
-  return collected.filter((cardId) => cardId === flippedCard || cardId !== flippedCard);
+  return null;
+}
+
+function reconstructTableAfterHandPlay(
+  before: MatgoGameState,
+  playedCard: CardId,
+  handCollect: CardId[],
+): TableCard[] {
+  if (handCollect.length === 0) {
+    return addTableCard(before.table, playedCard);
+  }
+
+  const collectedSet = new Set(handCollect);
+  return before.table
+    .map((tableCard) => {
+      const remaining = expandTableCard(tableCard).filter((cardId) => !collectedSet.has(cardId));
+      if (remaining.length === 0) {
+        return null;
+      }
+      if (remaining.length === 1) {
+        return { cardId: remaining[0] };
+      }
+      return {
+        cardId: remaining[remaining.length - 1],
+        stackedCardIds: remaining.slice(0, -1),
+      };
+    })
+    .filter((tableCard): tableCard is TableCard => tableCard !== null);
+}
+
+function resolveHandPlayTargetIndex(before: MatgoGameState, handCollect: CardId[]): number {
+  if (handCollect.length === 0) {
+    return before.table.length;
+  }
+
+  const matchedIndex = findCollectedPileIndex(before.table, handCollect);
+  if (matchedIndex !== null) {
+    return matchedIndex;
+  }
+
+  const month = handCollect[0] ? getCardMonth(handCollect[0]) : null;
+  if (month) {
+    const matchIndices = findTableMatchIndices(before.table, month);
+    if (matchIndices.length > 0) {
+      return matchIndices[0];
+    }
+  }
+
+  return before.table.length;
+}
+
+function resolveFlipDeckTargetIndex(
+  tableBeforeFlip: TableCard[],
+  flippedCard: CardId,
+  flipCollect: CardId[],
+  isPuk: boolean,
+): number {
+  const month = getCardMonth(flippedCard);
+  const matchIndices = findTableMatchIndices(tableBeforeFlip, month);
+
+  if (flipCollect.length > 0) {
+    const matchedIndex = findCollectedPileIndex(tableBeforeFlip, flipCollect);
+    if (matchedIndex !== null) {
+      return matchedIndex;
+    }
+    return matchIndices[0] ?? tableBeforeFlip.length;
+  }
+
+  if (isPuk && matchIndices.length > 0) {
+    return matchIndices[0];
+  }
+
+  if (matchIndices.length === 0) {
+    return tableBeforeFlip.length;
+  }
+
+  return matchIndices[0];
 }
 
 /**
@@ -111,8 +189,15 @@ export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): T
   const flipCollect = flippedCard
     ? allCollected.filter((cardId) => !handCollect.includes(cardId))
     : [];
+  const tableBeforeFlip = reconstructTableAfterHandPlay(before, playedCard, handCollect);
+  const stackPuk = flippedCard ? isStackPuk(before, after, flippedCard) : false;
 
-  steps.push({ type: 'playHand', cardId: playedCard, playerIndex });
+  steps.push({
+    type: 'playHand',
+    cardId: playedCard,
+    playerIndex,
+    targetTableIndex: resolveHandPlayTargetIndex(before, handCollect),
+  });
 
   if (handCollect.length > 0) {
     steps.push({ type: 'collect', cardIds: handCollect, playerIndex });
@@ -121,12 +206,20 @@ export function buildTurnSteps(before: MatgoGameState, after: MatgoGameState): T
   }
 
   if (flippedCard) {
-    steps.push({ type: 'flipDeck', cardId: flippedCard });
+    steps.push({
+      type: 'flipDeck',
+      cardId: flippedCard,
+      targetTableIndex: resolveFlipDeckTargetIndex(tableBeforeFlip, flippedCard, flipCollect, stackPuk),
+    });
 
     if (flipCollect.length > 0) {
       steps.push({ type: 'collect', cardIds: flipCollect, playerIndex });
-    } else if (isStackPuk(before, after, flippedCard)) {
-      steps.push({ type: 'stack', flippedCardId: flippedCard });
+    } else if (stackPuk) {
+      steps.push({
+        type: 'stack',
+        flippedCardId: flippedCard,
+        targetTableIndex: resolveFlipDeckTargetIndex(tableBeforeFlip, flippedCard, [], true),
+      });
     }
   }
 
@@ -194,16 +287,5 @@ export function applyVisualStep(state: MatgoGameState, step: TurnStep): MatgoGam
       return next;
     default:
       return next;
-  }
-}
-
-export function soundForStep(step: TurnStep): 'playCard' | 'flipCard' | null {
-  switch (step.type) {
-    case 'playHand':
-      return 'playCard';
-    case 'flipDeck':
-      return 'flipCard';
-    default:
-      return null;
   }
 }

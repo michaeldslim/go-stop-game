@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useSettings } from '../settings/SettingsProvider';
-import { useGameSounds } from '../audio/useGameSounds';
+import { useGameSounds } from '../audio/GameSoundsProvider';
 import { createGame } from './createGame';
 import { runAiTurn } from './ai';
 import { declareGo, declareStop } from './goStop';
@@ -89,7 +89,7 @@ export function useMatgoGame(
 ) {
   const router = useRouter();
   const { settings } = useSettings();
-  const { playEffects } = useGameSounds(settings.soundEnabled);
+  const { playEffects } = useGameSounds();
 
   const initialState = useMemo(
     () => createGame({ mode, aiDifficulty, handMultiplier }),
@@ -110,9 +110,7 @@ export function useMatgoGame(
     onFlightComplete,
     inFlightCardId,
   } = useTurnAnimation({
-    soundEnabled: settings.soundEnabled,
     hapticsEnabled: settings.hapticsEnabled,
-    playEffects,
   });
 
   const boardGame = displayGame ?? game;
@@ -177,6 +175,10 @@ export function useMatgoGame(
       const before = gameRef.current;
       const after = gameReducer(before, action);
 
+      if (settings.soundEnabled && after.soundEffects.length > 0) {
+        void playEffects(after.soundEffects);
+      }
+
       if (!shouldAnimate(before, after)) {
         notifyHumanYaku(before, after);
         dispatch(action);
@@ -187,7 +189,7 @@ export function useMatgoGame(
       notifyHumanYaku(before, after);
       dispatch(action);
     },
-    [animateTurn, notifyHumanYaku],
+    [animateTurn, notifyHumanYaku, playEffects, settings.soundEnabled],
   );
 
   useEffect(() => {
@@ -287,6 +289,17 @@ export function useMatgoGame(
     isHumanTurn(boardGame) &&
     !isAnimating &&
     canDeclareBomb(boardGame, boardGame.currentPlayerIndex);
+
+  useEffect(() => {
+    if (
+      game.phase !== 'goStopPrompt' ||
+      humanIndex < 0 ||
+      game.goStopPlayerIndex !== humanIndex
+    ) {
+      return;
+    }
+    void playEffects(['goStop']);
+  }, [game.phase, game.goStopPlayerIndex, humanIndex, playEffects]);
 
   useEffect(() => {
     if (!isAiTurn(game) || isAnimating) {

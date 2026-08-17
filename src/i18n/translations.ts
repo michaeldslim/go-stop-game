@@ -13,6 +13,7 @@ export type TranslationKey =
   | 'settings.feedback'
   | 'settings.sound'
   | 'settings.soundDesc'
+  | 'settings.soundVolume'
   | 'settings.haptics'
   | 'settings.hapticsDesc'
   | 'settings.credit'
@@ -98,6 +99,7 @@ const en: Record<TranslationKey, string> = {
   'settings.feedback': 'Feedback',
   'settings.sound': 'Sound Effects',
   'settings.soundDesc': 'Card flip, match, Go/Stop',
+  'settings.soundVolume': 'Volume',
   'settings.haptics': 'Haptics',
   'settings.hapticsDesc': 'Vibration on match and Go',
   'settings.credit': 'Card art: Wikimedia Commons (CC BY-SA 4.0)',
@@ -191,6 +193,7 @@ const ko: Record<TranslationKey, string> = {
   'settings.feedback': '피드백',
   'settings.sound': '효과음',
   'settings.soundDesc': '카드 뒤집기, 매칭, 고/스톱',
+  'settings.soundVolume': '볼륨',
   'settings.haptics': '햅틱',
   'settings.hapticsDesc': '매칭 및 고 선언 시 진동',
   'settings.credit': '카드 아트: Wikimedia Commons (CC BY-SA 4.0)',

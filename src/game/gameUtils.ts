@@ -19,8 +19,8 @@ export function cloneGameState(state: MatgoGameState): MatgoGameState {
     })),
     deck: [...state.deck],
     pendingAction: state.pendingAction ? { ...state.pendingAction } : null,
-    soundEffects: [],
-    turnSpecialMoves: [],
+    soundEffects: [...state.soundEffects],
+    turnSpecialMoves: [...state.turnSpecialMoves],
   };
 }
 

@@ -16,6 +16,7 @@ import {
   getLocalizedText,
 } from '../src/constants/gameOptions';
 import { colors } from '../src/constants/colors';
+import { CARD_DIMENSIONS } from '../src/constants/layout';
 import { expandTableCard } from '../src/game/tableCards';
 import { useMatgoGame } from '../src/game/useMatgoGame';
 import { useTranslation } from '../src/i18n/useTranslation';
@@ -241,7 +242,10 @@ function GameScreenContent() {
                   </Text>
                 </LayoutAnchor>
                 <View style={styles.tableGrid}>
-              {game.table.map((tableCard, index) => {
+                  <LayoutAnchor anchorKey={anchorKeys.tableCenter} style={styles.tableCenterAnchor}>
+                    {null}
+                  </LayoutAnchor>
+                  {game.table.map((tableCard, index) => {
                 const card = getCardById(tableCard.cardId);
                 const stackSize = expandTableCard(tableCard).length;
                 const choosable = choosableTableIndices.has(index);
@@ -268,6 +272,13 @@ function GameScreenContent() {
                   </LayoutAnchor>
                 );
               })}
+                  <LayoutAnchor
+                    key={`table-slot-${game.table.length}`}
+                    anchorKey={anchorKeys.table(game.table.length)}
+                    style={styles.tableEmptySlot}
+                  >
+                    {null}
+                  </LayoutAnchor>
                 </View>
                 {game.lastFlippedCardId && !hiddenCards?.has(game.lastFlippedCardId) ? (
                   <View style={styles.flippedSlot}>
@@ -490,6 +501,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 10,
+    position: 'relative',
+  },
+  tableCenterAnchor: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tableEmptySlot: {
+    width: CARD_DIMENSIONS.table.width,
+    height: CARD_DIMENSIONS.table.height,
   },
   tableItem: {
     alignItems: 'center',

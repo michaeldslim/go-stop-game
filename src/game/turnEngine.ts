@@ -250,20 +250,24 @@ function resolveHandPlay(
 
   if (shouldPromptHandMatch(state.table, matchIndices) && tableIndex === undefined) {
     return setStatus(
-      {
-        ...withPending(state, {
-          type: 'chooseHandMatch',
-          playerIndex,
-          handCardId,
-          matchIndices,
-        }),
-        soundEffects: [],
-      },
+      appendSound(
+        {
+          ...withPending(state, {
+            type: 'chooseHandMatch',
+            playerIndex,
+            handCardId,
+            matchIndices,
+          }),
+          soundEffects: [],
+        },
+        'playCard',
+      ),
       'Choose a matching table card',
     );
   }
 
   let next = cloneGameState(state);
+  next = { ...next, soundEffects: [] };
   const players = [...next.players];
   players[playerIndex] = removeFromHand(players[playerIndex], handCardId);
   next = appendSound({ ...next, players, pendingAction: null, turnSpecialMoves: [] }, 'playCard');

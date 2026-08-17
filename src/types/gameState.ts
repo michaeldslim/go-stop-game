@@ -7,7 +7,7 @@ export type PlayerIndex = number;
 
 export type FinishReason = 'stop' | 'handsEmpty' | 'autoWin' | 'draw' | 'nagari';
 
-export type GameSoundEffect = 'playCard' | 'flipCard' | 'yaku';
+export type GameSoundEffect = 'playCard' | 'flipCard' | 'yaku' | 'goStop';
 
 export type SepCupRole = 'animal' | 'junk';
 

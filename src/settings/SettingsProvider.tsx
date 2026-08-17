@@ -1,8 +1,42 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { DEFAULT_SETTINGS, type AppSettings } from '../types/game';
+import { DEFAULT_SETTINGS, SOUND_VOLUME_MAX, SOUND_VOLUME_MIN, type AppSettings } from '../types/game';
 
 const STORAGE_KEY = '@hwatu/settings';
+
+type StoredSettings = Partial<AppSettings> & {
+  soundVolumes?: Partial<Record<'playCard' | 'flipCard' | 'yaku' | 'goStop', number>>;
+};
+
+function resolveSoundVolume(parsed: StoredSettings): number {
+  const raw =
+    parsed.soundVolume ??
+    parsed.soundVolumes?.playCard ??
+    DEFAULT_SETTINGS.soundVolume;
+
+  if (typeof raw !== 'number' || Number.isNaN(raw)) {
+    return DEFAULT_SETTINGS.soundVolume;
+  }
+
+  return Math.max(SOUND_VOLUME_MIN, Math.min(SOUND_VOLUME_MAX, Math.round(raw)));
+}
+
+function loadSettings(raw: string | null): AppSettings {
+  if (!raw) {
+    return DEFAULT_SETTINGS;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as StoredSettings;
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      soundVolume: resolveSoundVolume(parsed),
+    };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
 
 interface SettingsContextValue {
   settings: AppSettings;
@@ -25,12 +59,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        try {
-          const parsed = JSON.parse(raw) as Partial<AppSettings>;
-          setSettings({ ...DEFAULT_SETTINGS, ...parsed });
-        } catch {
-          // Ignore corrupt storage and fall back to defaults.
-        }
+        setSettings(loadSettings(raw));
       })
       .finally(() => {
         if (!cancelled) {

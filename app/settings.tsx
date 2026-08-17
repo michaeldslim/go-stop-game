@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OptionPicker } from '../src/components/OptionPicker';
 import { ScreenHeader } from '../src/components/ScreenHeader';
 import { SettingsToggleRow } from '../src/components/SettingsToggleRow';
+import { SettingsVolumeSlider } from '../src/components/SettingsVolumeSlider';
 import {
   AI_DIFFICULTY_OPTIONS,
   GAME_MODE_OPTIONS,
@@ -12,6 +13,7 @@ import {
 } from '../src/constants/gameOptions';
 import { colors } from '../src/constants/colors';
 import { useTranslation } from '../src/i18n/useTranslation';
+import { useGameSounds } from '../src/audio/GameSoundsProvider';
 import { useSettings } from '../src/settings/SettingsProvider';
 import type { AiDifficulty, AppLanguage, GameMode } from '../src/types/game';
 
@@ -19,6 +21,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { settings, updateSettings } = useSettings();
   const { t, language } = useTranslation();
+  const { previewAtVolume } = useGameSounds();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -66,6 +69,17 @@ export default function SettingsScreen() {
             description={t('settings.soundDesc')}
             value={settings.soundEnabled}
             onValueChange={(value) => updateSettings({ soundEnabled: value })}
+          />
+          <SettingsVolumeSlider
+            label={t('settings.soundVolume')}
+            value={settings.soundVolume}
+            disabled={!settings.soundEnabled}
+            onValueChange={(value) => updateSettings({ soundVolume: Math.round(value) })}
+            onSlidingComplete={(value) => {
+              const level = Math.round(value);
+              updateSettings({ soundVolume: level });
+              void previewAtVolume(level);
+            }}
           />
           <SettingsToggleRow
             label={t('settings.haptics')}

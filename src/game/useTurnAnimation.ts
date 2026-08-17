@@ -1,12 +1,11 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, useState } from 'react';
-import type { GameSoundEffect, MatgoGameState } from '../types/gameState';
+import type { MatgoGameState } from '../types/gameState';
 import type { ActiveFlightState } from '../components/TurnAnimationOverlay';
 import { anchorKeys, useLayoutAnchors, type AnchorPoint } from '../components/LayoutAnchor';
 import {
   applyVisualStep,
   buildTurnSteps,
-  soundForStep,
   STEP_TIMING,
   type TurnStep,
 } from './turnSteps';
@@ -14,9 +13,7 @@ import {
 interface ActiveFlight extends ActiveFlightState {}
 
 interface UseTurnAnimationOptions {
-  soundEnabled: boolean;
   hapticsEnabled: boolean;
-  playEffects: (effects: GameSoundEffect[]) => Promise<void>;
 }
 
 function delay(ms: number): Promise<void> {
@@ -30,9 +27,7 @@ function fallbackPoint(): AnchorPoint {
 }
 
 export function useTurnAnimation({
-  soundEnabled,
   hapticsEnabled,
-  playEffects,
 }: UseTurnAnimationOptions) {
   const { get } = useLayoutAnchors();
   const [displayGame, setDisplayGame] = useState<MatgoGameState | null>(null);
@@ -45,6 +40,14 @@ export function useTurnAnimation({
     [get],
   );
 
+  const resolveTableTarget = useCallback(
+    (targetTableIndex: number): AnchorPoint =>
+      get(anchorKeys.table(targetTableIndex)) ??
+      get(anchorKeys.tableCenter) ??
+      fallbackPoint(),
+    [get],
+  );
+
   const resolveStepFlight = useCallback(
     (step: TurnStep, visual: MatgoGameState): ActiveFlight | null => {
       switch (step.type) {
@@ -52,8 +55,7 @@ export function useTurnAnimation({
           const from =
             get(anchorKeys.hand(step.playerIndex, step.cardId)) ??
             resolveAnchor(anchorKeys.aiHand(step.playerIndex));
-          const tableIndex = visual.table.length;
-          const to = resolveAnchor(anchorKeys.table(tableIndex));
+          const to = resolveTableTarget(step.targetTableIndex);
           return {
             id: `play-${step.cardId}`,
             cardId: step.cardId,
@@ -70,7 +72,7 @@ export function useTurnAnimation({
             id: `flip-${step.cardId}`,
             cardId: step.cardId,
             from: resolveAnchor(anchorKeys.deck),
-            to: resolveAnchor(anchorKeys.table(visual.table.length)),
+            to: resolveTableTarget(step.targetTableIndex),
             size: 'small',
             faceDown: true,
             flipOnArrival: true,
@@ -106,7 +108,7 @@ export function useTurnAnimation({
             id: `stack-${step.flippedCardId}`,
             cardId: step.flippedCardId,
             from: resolveAnchor(anchorKeys.deck),
-            to: resolveAnchor(anchorKeys.table(Math.max(visual.table.length - 1, 0))),
+            to: resolveTableTarget(step.targetTableIndex),
             size: 'small',
             faceDown: false,
             flipOnArrival: false,
@@ -117,7 +119,7 @@ export function useTurnAnimation({
           return null;
       }
     },
-    [get, resolveAnchor],
+    [get, resolveAnchor, resolveTableTarget],
   );
 
   const waitForFlight = useCallback(
@@ -137,10 +139,6 @@ export function useTurnAnimation({
 
   const runStep = useCallback(
     async (step: TurnStep, visual: MatgoGameState): Promise<MatgoGameState> => {
-      const sound = soundForStep(step);
-      if (sound && soundEnabled) {
-        void playEffects([sound]);
-      }
       if (step.type === 'collect' && hapticsEnabled) {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
@@ -157,7 +155,7 @@ export function useTurnAnimation({
 
       return applyVisualStep(visual, step);
     },
-    [hapticsEnabled, playEffects, resolveStepFlight, soundEnabled, waitForFlight],
+    [hapticsEnabled, resolveStepFlight, waitForFlight],
   );
 
   const animateTurn = useCallback(
