@@ -1,6 +1,6 @@
 ---
 name: Hwatu Mobile App
-overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약(고도리·단) 완성 콜아웃·gather-long 사운드·손패 가로 스크롤. Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드는 미구현(optional).
+overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약 콜아웃·gather-long·손패 가로 스크롤·보드 세로 스크롤(3P)·애니 앵커 remeasure·collect sourceTableIndex·AI 손패 mini. Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드는 미구현(optional).
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩, 앱 아이콘, 기본 폴더 구조
@@ -37,6 +37,9 @@ todos:
     status: completed
   - id: yaku-callout
     content: 약 완성 콜아웃 (YakuCalloutOverlay) + gather-long 사운드 + 손패 가로 스크롤
+    status: completed
+  - id: board-layout-animation
+    content: 보드 세로 스크롤(3P) + LayoutAnchor remeasure + collect sourceTableIndex + AI 손패 mini
     status: completed
   - id: ai-opponent
     content: AI 대전 — 난이도 4단계 (초보/중급/고급/전문가), 턴·Go/Stop·매칭 휴리스틱
@@ -171,6 +174,7 @@ December (12): Bright(rain), Junk×2 + double-junk (counts as 2 피)
 - **Never** upscale beyond `@3x` — always ship sharp source art
 - Table cards: min display height **72pt** (@3x = 216px) — below this, text on cards is unreadable
 - Hand cards: min height **88pt** for comfortable touch targets
+- Opponent face-down hand: **mini** size **22×36pt** (compact fan above collected piles)
 - Provide **subtle drop shadow** via wrapper View, not baked into PNG (keeps assets reusable)
 - **Border radius** applied in CSS (`borderRadius: 6`) — do not bake rounded corners into master PNG
 
@@ -233,7 +237,7 @@ src/
     YakuCalloutOverlay.tsx # full-screen yaku celebration (backdrop, banner, per-yaku accent)
     FlyingCard.tsx         # Reanimated flying card overlay
     TurnAnimationOverlay.tsx
-    LayoutAnchor.tsx       # measureInWindow anchor registry
+    LayoutAnchor.tsx       # measureInWindow anchor registry + remeasureAll on scroll
     GoStopModal.tsx        # human Go/Stop decision modal
     SepCupModal.tsx        # September cup 열끗 vs 쌍피 choice
     SpecialMoveBar.tsx     # 흔들기 / 폭탄 declare chips
@@ -242,7 +246,7 @@ src/
     SettingsToggleRow.tsx  # switch row for settings
   constants/
     colors.ts
-    layout.ts
+    layout.ts              # CARD_DIMENSIONS incl. mini (22×36) for AI hand
     gameOptions.ts         # AI difficulty, game mode, language labels (EN/KO)
   settings/
     SettingsProvider.tsx   # AsyncStorage-backed settings context
@@ -482,22 +486,22 @@ No Go/Stop — play until cards exhausted. Per-card scoring (`calculateHwatuSimp
 - **Start** (gold primary CTA) → `createGame({ mode, aiDifficulty })` — shuffle, dealer draw, mode-specific deal
 - Link to Settings for changing defaults
 
-### Game Screen (portrait) — 맞고 2P ✅
+### Game Screen (portrait) — 맞고 2P / 고스톱 3P ✅
+
+Fixed **top bar** (leave + turn hint). Everything below scrolls vertically in one `ScrollView` (`boardScroll`) — needed for 3P (two AI rows + piles + table + human pile + hand). Scroll disabled while `isAnimating`; `remeasureAll()` on scroll end keeps flight anchors accurate.
 
 ```
 ┌─────────────────────────────┐
-│ ← Leave          Your turn  │  ← compact top bar (no title)
+│ ← Leave          Your turn  │  ← fixed top bar
 ├─────────────────────────────┤
+│ ↕ scrollable board          │
 │ AI · [difficulty]  N pts    │
-│ [face-down hand]            │
-│ [AI collected pile tray]    │  ← CollectedPileView
-├─────────────────────────────┤
-│     TABLE (face-up cards)   │
-├─────────────────────────────┤
-│  deck:#   flipped   target  │
-├─────────────────────────────┤
+│ [face-down mini fan]        │  ← HandFanView size="mini"
+│ [AI collected pile tray]    │  ← CollectedPileView (×2 in 3P)
+│ TABLE · deck:#  [flipped]   │  ← deck anchor in table header
+│ [face-up table grid]        │
 │ [your collected pile tray]  │
-│ YOUR HAND (fan arc)         │  ← HandFanView
+│ YOUR HAND (fan arc)         │  ← HandFanView + horizontal scroll
 └─────────────────────────────┘
 ```
 
@@ -525,8 +529,10 @@ No Go/Stop — play until cards exhausted. Per-card scoring (`calculateHwatuSimp
 - **Result screen** — `app/result.tsx` with breakdown + play again
 - **Collected pile UI** — `CollectedPileView` for human + AI (`pile` card size 32×52pt)
 - **Fan hand layout** — `HandFanView` with rotation + overlap; **horizontal scroll** when fan width exceeds viewport (narrow phones / many cards)
-- Compact game header (back + turn hint; setup badges moved to deck row)
-- Deck count, last-flipped preview, status messages
+- Compact game header (back + turn hint only — fixed above scroll)
+- **Unified board scroll** — opponents → AI piles → table (deck count in header) → human pile → hand; scroll locks during animation
+- Deck count in table section header (`LayoutAnchor` deck slot); last-flipped preview above table grid
+- **AI opponent hand** — `HandFanView` `size="mini"` (22×36pt); `hiddenCardIds` during in-flight cards
 - **Sound + haptics** — `playCard` / `flipCard` per animation step (`useTurnAnimation`); haptic on collect step; **yaku** sound + success haptic on human yaku complete
 - **Yaku callout** — `yaku.ts` detects 3rd godori·홍단·청단·초단 card; `YakuCalloutOverlay` (dim backdrop, gold banner, per-yaku accent); queued if multiple complete in one turn
 - **Card motion (Phase 3)** — sequenced play → flip → collect via `turnSteps.ts`, `FlyingCard`, `TurnAnimationOverlay`, `LayoutAnchor`; `isAnimating` input lock
@@ -613,11 +619,11 @@ Keep **domain rules** in `turnEngine.ts`; add a thin **presentation layer**:
 
 | Piece | Role |
 |-------|------|
-| `TurnStep` type | `playHand`, `flipDeck`, `collect`, `stack`, `tableOnly` — each with `cardIds`, `playerIndex`, slot hints |
+| `TurnStep` type | `playHand`, `flipDeck`, `collect` (+ `sourceTableIndex`), `stack`, `pause` — each with `cardIds`, `playerIndex`, slot hints |
 | `buildTurnSteps(before, after)` or phased engine calls | Derive animation steps from state diff, or split `playHandCard` into apply-play → apply-flip → apply-collect |
 | `AnimationController` hook | Queue steps, `isAnimating` locks input, runs Reanimated transitions |
 | `FlyingCard` overlay | Absolute-positioned `CardView` above board; not tied to ScrollView layout during flight |
-| Layout anchors | `onLayout` on hand slots, table cells, deck pile, collected tray — store center `{x,y}` in ref map |
+| Layout anchors | `onLayout` + `measureInWindow` on hand slots, table cells, deck pile, collected tray — store center `{x,y}`; `remeasureAll()` before each animation step and after board scroll |
 | `game.tsx` | Renders logical board from **committed** state; overlay shows **in-flight** cards until step completes |
 
 **Recommended:** phased commits inside `useMatgoGame` — reducer actions `PLAY_HAND`, `FLIP_DECK`, `COLLECT` — so animation hooks between dispatches. Alternative: single dispatch + `buildTurnSteps(prev, next)` replay (less engine change, harder to sync mid-turn choices).
@@ -659,7 +665,7 @@ src/
     FlyingCard.tsx         # Reanimated overlay card
     TurnAnimationOverlay.tsx
     YakuCalloutOverlay.tsx # yaku celebration overlay
-    LayoutAnchor.tsx       # onLayout anchor registry for flight paths
+    LayoutAnchor.tsx       # onLayout anchor registry + remeasureAll / subscribeRemeasure
   i18n/
     translations.ts        # EN/KO string catalog (+ game.yaku.*)
     useTranslation.ts      # hook wired to Settings language
@@ -674,6 +680,8 @@ src/
 - [x] No double-tap or illegal plays while `isAnimating`
 - [x] 뻑: flip stacks on table without collect flight
 - [x] Sounds align with play and flip animation steps
+- [x] Collect flights originate from correct table slot (`sourceTableIndex` on collect steps)
+- [x] Anchors remeasured before each step and after board scroll (accurate paths on 3P layout)
 
 ### Phase placement
 
@@ -695,6 +703,7 @@ type AppLanguage = 'en' | 'ko';
 type SepCupRole = 'animal' | 'junk';
 type GameSoundEffect = 'playCard' | 'flipCard' | 'yaku';
 type YakuType = 'godori' | 'hongdan' | 'cheongdan' | 'chodan';
+type CardSize = 'hand' | 'table' | 'small' | 'pile' | 'mini';
 
 interface CardDefinition { /* id, month, type, piValue, labels, flags */ }
 interface AppSettings { language, defaultAiDifficulty, defaultGameMode, soundEnabled, hapticsEnabled }
@@ -715,7 +724,7 @@ interface MatgoGameState {
 }
 ```
 
-**Phase 4 complete** — 3P gostop, hwatu simple, advanced rules, settlement, sep cup choice. **Post-Phase 4 polish** — yaku callout overlay, gather-long on yaku, hand horizontal scroll.
+**Phase 4 complete** — 3P gostop, hwatu simple, advanced rules, settlement, sep cup choice. **Post-Phase 4 polish** — yaku callout, gather-long on yaku, hand horizontal scroll, unified board vertical scroll (3P), `LayoutAnchor.remeasureAll`, collect `sourceTableIndex`, AI `mini` hand cards.
 
 ---
 
@@ -773,6 +782,9 @@ interface MatgoGameState {
   - [x] `TurnStep` / `FlyingCard` presentation layer
 - [x] **Yaku celebration** — `yaku.ts` + `YakuCalloutOverlay` + `gather-long.mp3` on human godori·단 complete
 - [x] **Hand scroll** — `HandFanView` horizontal scroll on narrow screens / large hands
+- [x] **Board scroll** — single vertical `ScrollView` for full 3P layout; scroll disabled during animation; remeasure anchors on scroll end
+- [x] **Animation anchor sync** — `remeasureAll()` + double-RAF before each turn step; collect steps carry `sourceTableIndex`
+- [x] **AI mini hand** — opponent face-down fan uses `CardSize 'mini'` (22×36pt)
 - [ ] Deal animation (optional — cards fly from deck to hand/table on new hand) — deferred
 - [x] AI tuning per difficulty (lookahead, mistake rate, Go/Stop policy) — Phase 2 baseline; shake/bomb in Phase 4
 - [x] i18n (EN/KO) + Rules screen content (`src/i18n/`, localized Home/Setup/Settings/Game/Rules)
@@ -875,6 +887,15 @@ interface MatgoGameState {
 - [x] Human hand scrolls horizontally when fan exceeds screen width (e.g. Galaxy narrow viewport)
 - [x] Collected pile 피 rows remain overlap stack (5/row); 광·띠·열끗 rows keep horizontal scroll
 
+## Acceptance Criteria — Board layout & animation sync ✅
+
+- [x] 고스톱 3P board fits on phone via vertical scroll (opponents, piles, table, human hand)
+- [x] Board scroll disabled while `isAnimating`; re-enabled after turn completes
+- [x] `remeasureAll()` runs on scroll end and before each animation step
+- [x] Collect animation flies from the matched table slot, not deck fallback (`sourceTableIndex`)
+- [x] AI opponent hands render as compact `mini` face-down fan; in-flight cards hidden via `hiddenCardIds`
+- [x] Deck pile anchor lives in table section header (not a separate bottom row)
+
 ---
 
 ## References
@@ -888,4 +909,4 @@ interface MatgoGameState {
 
 ## Next Step
 
-**Phase 5 — Release** — EAS Build (Android → iOS), Play Store / App Store listing. Optional polish: deal animation, bonus/joker card art + engine support. Recent UX polish (yaku callout, hand scroll, sound remap) is **done**.
+**Phase 5 — Release** — EAS Build (Android → iOS), Play Store / App Store listing. Optional polish: deal animation, bonus/joker card art + engine support. Post-Phase 4 UX polish (yaku callout, hand scroll, board scroll, animation anchor sync, AI mini hands) is **done**.

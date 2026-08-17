@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   type ReactNode,
@@ -13,15 +14,20 @@ export interface AnchorPoint {
   y: number;
 }
 
+type RemeasureFn = (onComplete: () => void) => void;
+
 interface LayoutAnchorContextValue {
   register: (key: string, point: AnchorPoint) => void;
   get: (key: string) => AnchorPoint | undefined;
+  remeasureAll: () => Promise<void>;
+  subscribeRemeasure: (fn: RemeasureFn) => () => void;
 }
 
 const LayoutAnchorContext = createContext<LayoutAnchorContextValue | null>(null);
 
 export function LayoutAnchorProvider({ children }: { children: ReactNode }) {
   const anchors = useRef<Record<string, AnchorPoint>>({});
+  const remeasureFns = useRef<Set<RemeasureFn>>(new Set());
 
   const register = useCallback((key: string, point: AnchorPoint) => {
     anchors.current[key] = point;
@@ -29,7 +35,43 @@ export function LayoutAnchorProvider({ children }: { children: ReactNode }) {
 
   const get = useCallback((key: string) => anchors.current[key], []);
 
-  const value = useMemo(() => ({ register, get }), [register, get]);
+  const subscribeRemeasure = useCallback((fn: RemeasureFn) => {
+    remeasureFns.current.add(fn);
+    return () => {
+      remeasureFns.current.delete(fn);
+    };
+  }, []);
+
+  const remeasureAll = useCallback((): Promise<void> => {
+    const fns = [...remeasureFns.current];
+    if (fns.length === 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      let remaining = fns.length;
+      const done = () => {
+        remaining -= 1;
+        if (remaining === 0) {
+          requestAnimationFrame(() => resolve());
+        }
+      };
+
+      for (const fn of fns) {
+        fn(done);
+      }
+    });
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      register,
+      get,
+      remeasureAll,
+      subscribeRemeasure,
+    }),
+    [register, get, remeasureAll, subscribeRemeasure],
+  );
 
   return <LayoutAnchorContext.Provider value={value}>{children}</LayoutAnchorContext.Provider>;
 }
@@ -59,13 +101,22 @@ export function LayoutAnchor({ anchorKey, children, style, ...rest }: LayoutAnch
     );
   }
 
-  const { register } = context;
+  const { register, subscribeRemeasure } = context;
 
-  const measure = useCallback(() => {
-    viewRef.current?.measureInWindow((x, y, width, height) => {
-      register(anchorKey, { x: x + width / 2, y: y + height / 2 });
-    });
-  }, [anchorKey, register]);
+  const measure = useCallback(
+    (onComplete?: () => void) => {
+      if (!viewRef.current) {
+        onComplete?.();
+        return;
+      }
+
+      viewRef.current.measureInWindow((x, y, width, height) => {
+        register(anchorKey, { x: x + width / 2, y: y + height / 2 });
+        onComplete?.();
+      });
+    },
+    [anchorKey, register],
+  );
 
   const onLayout = useCallback(
     (_event: LayoutChangeEvent) => {
@@ -73,6 +124,12 @@ export function LayoutAnchor({ anchorKey, children, style, ...rest }: LayoutAnch
     },
     [measure],
   );
+
+  useEffect(() => {
+    return subscribeRemeasure((onComplete) => {
+      measure(onComplete);
+    });
+  }, [subscribeRemeasure, measure]);
 
   return (
     <View ref={viewRef} onLayout={onLayout} style={style} collapsable={false} {...rest}>

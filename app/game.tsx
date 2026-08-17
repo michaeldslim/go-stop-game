@@ -6,7 +6,7 @@ import { CardView } from '../src/components/CardView';
 import { CollectedPileView } from '../src/components/CollectedPileView';
 import { GoStopModal } from '../src/components/GoStopModal';
 import { HandFanView } from '../src/components/HandFanView';
-import { LayoutAnchor, LayoutAnchorProvider, anchorKeys } from '../src/components/LayoutAnchor';
+import { LayoutAnchor, LayoutAnchorProvider, anchorKeys, useLayoutAnchors } from '../src/components/LayoutAnchor';
 import { SepCupModal } from '../src/components/SepCupModal';
 import { SpecialMoveBar } from '../src/components/SpecialMoveBar';
 import { TurnAnimationOverlay } from '../src/components/TurnAnimationOverlay';
@@ -71,6 +71,7 @@ function OpponentBar({
   dealerLabel,
   pointsLabel,
   handCountLabel,
+  hiddenCardIds,
 }: {
   player: PlayerState;
   playerIndex: number;
@@ -79,6 +80,7 @@ function OpponentBar({
   dealerLabel: string;
   pointsLabel: string;
   handCountLabel: string;
+  hiddenCardIds?: Set<string>;
 }) {
   return (
     <View style={styles.opponentBar}>
@@ -93,9 +95,10 @@ function OpponentBar({
       <HandFanView
         cardIds={player.hand}
         playerIndex={playerIndex}
+        hiddenCardIds={hiddenCardIds}
         faceDown
         fanDirection="down"
-        size="small"
+        size="mini"
         style={styles.aiHandFan}
       />
     </View>
@@ -104,6 +107,7 @@ function OpponentBar({
 
 function GameScreenContent() {
   const router = useRouter();
+  const { remeasureAll } = useLayoutAnchors();
   const params = useLocalSearchParams<{
     mode?: string;
     difficulty?: string;
@@ -175,16 +179,27 @@ function GameScreenContent() {
         </Text>
       </View>
 
-      <SpecialMoveBar
-        language={language}
-        canShake={canShake}
-        canBomb={canBomb}
-        onShake={callShake}
-        onBomb={callBomb}
-        disabled={!isHumanTurn || isAnimating}
-      />
+      <ScrollView
+        style={styles.boardScroll}
+        contentContainerStyle={styles.boardContent}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!isAnimating}
+        onScrollEndDrag={() => {
+          void remeasureAll();
+        }}
+        onMomentumScrollEnd={() => {
+          void remeasureAll();
+        }}
+      >
+        <SpecialMoveBar
+          language={language}
+          canShake={canShake}
+          canBomb={canBomb}
+          onShake={callShake}
+          onBomb={callBomb}
+          disabled={!isHumanTurn || isAnimating}
+        />
 
-      <View style={styles.playArea}>
         <View style={styles.topHandDock}>
           {opponents.map((opponent) => {
             const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
@@ -198,100 +213,93 @@ function GameScreenContent() {
                 dealerLabel={t('game.dealer')}
                 pointsLabel={`${t('game.points', { score: opponent.score })}${opponent.goCount > 0 ? ` · ${opponent.goCount}고` : ''}`}
                 handCountLabel={t('game.handCount', { count: opponent.hand.length })}
+                hiddenCardIds={hiddenCards}
               />
             );
           })}
         </View>
 
-        <ScrollView
-          style={styles.middleScroll}
-          contentContainerStyle={styles.middleContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {opponents.map((opponent) => {
-            const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
-            return (
-              <CollectedPileView
-                key={`pile-${opponent.id}`}
-                cardIds={opponent.collected}
-                playerIndex={playerIndex}
-              />
-            );
-          })}
+        {opponents.map((opponent) => {
+          const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
+          return (
+            <CollectedPileView
+              key={`pile-${opponent.id}`}
+              cardIds={opponent.collected}
+              playerIndex={playerIndex}
+            />
+          );
+        })}
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>{t('game.table')}</Text>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>{t('game.table')}</Text>
+            <View style={styles.tableHeaderMeta}>
               <Text style={styles.sectionMeta}>
                 {t('game.cardCount', { count: game.table.length })}
               </Text>
-            </View>
-            {needsTableChoice ? (
-              <Text style={styles.prompt}>
-                {pendingTableChoice?.flippedCardId
-                  ? t('game.chooseFlipMatch')
-                  : t('game.chooseTable')}
-              </Text>
-            ) : null}
-            <View style={styles.tableField}>
-              <View style={styles.tableRow}>
-                <LayoutAnchor anchorKey={anchorKeys.deck} style={styles.deckSlot}>
-                  <CardView card={getCardById('jan-junk-1')} size="pile" faceDown />
-                  <Text style={styles.deckCount}>
-                    {t('game.deck', { count: game.deck.length })}
-                  </Text>
-                </LayoutAnchor>
-                <View style={styles.tableGrid}>
-                  <LayoutAnchor anchorKey={anchorKeys.tableCenter} style={styles.tableCenterAnchor}>
-                    {null}
-                  </LayoutAnchor>
-                  {game.table.map((tableCard, index) => {
-                const card = getCardById(tableCard.cardId);
-                const stackSize = expandTableCard(tableCard).length;
-                const choosable = choosableTableIndices.has(index);
-                const hidden = hiddenCards?.has(tableCard.cardId);
-
-                return (
-                  <LayoutAnchor
-                    key={`table-${index}-${tableCard.cardId}`}
-                    anchorKey={anchorKeys.table(index)}
-                    style={[styles.tableItem, choosable && styles.tableItemChoosable]}
-                  >
-                    <CardView
-                      card={card}
-                      size="table"
-                      onPress={choosable ? () => chooseTable(index) : undefined}
-                      choosable={choosable}
-                      style={hidden ? styles.hidden : undefined}
-                    />
-                    {stackSize > 1 ? (
-                      <Text style={styles.stackLabel}>
-                        {t('game.stack', { count: stackSize })}
-                      </Text>
-                    ) : null}
-                  </LayoutAnchor>
-                );
-              })}
-                  <LayoutAnchor
-                    key={`table-slot-${game.table.length}`}
-                    anchorKey={anchorKeys.table(game.table.length)}
-                    style={styles.tableEmptySlot}
-                  >
-                    {null}
-                  </LayoutAnchor>
-                </View>
-                {game.lastFlippedCardId && !hiddenCards?.has(game.lastFlippedCardId) ? (
-                  <View style={styles.flippedSlot}>
-                    <Text style={styles.flippedLabel}>{t('game.flipped')}</Text>
-                    <CardView card={getCardById(game.lastFlippedCardId)} size="pile" />
-                  </View>
-                ) : null}
-              </View>
+              <LayoutAnchor anchorKey={anchorKeys.deck} style={styles.deckSlot}>
+                <CardView card={getCardById('jan-junk-1')} size="pile" faceDown />
+                <Text style={styles.deckCount}>
+                  {t('game.deck', { count: game.deck.length })}
+                </Text>
+              </LayoutAnchor>
             </View>
           </View>
+          {needsTableChoice ? (
+            <Text style={styles.prompt}>
+              {pendingTableChoice?.flippedCardId
+                ? t('game.chooseFlipMatch')
+                : t('game.chooseTable')}
+            </Text>
+          ) : null}
+          {game.lastFlippedCardId && !hiddenCards?.has(game.lastFlippedCardId) ? (
+            <View style={styles.flippedSlot}>
+              <Text style={styles.flippedLabel}>{t('game.flipped')}</Text>
+              <CardView card={getCardById(game.lastFlippedCardId)} size="pile" />
+            </View>
+          ) : null}
+          <View style={styles.tableGrid}>
+            <LayoutAnchor anchorKey={anchorKeys.tableCenter} style={styles.tableCenterAnchor}>
+              {null}
+            </LayoutAnchor>
+            {game.table.map((tableCard, index) => {
+              const card = getCardById(tableCard.cardId);
+              const stackSize = expandTableCard(tableCard).length;
+              const choosable = choosableTableIndices.has(index);
+              const hidden = hiddenCards?.has(tableCard.cardId);
 
-          <CollectedPileView cardIds={human.collected} playerIndex={humanIndex} />
-        </ScrollView>
+              return (
+                <LayoutAnchor
+                  key={`table-${index}-${tableCard.cardId}`}
+                  anchorKey={anchorKeys.table(index)}
+                  style={[styles.tableItem, choosable && styles.tableItemChoosable]}
+                >
+                  <CardView
+                    card={card}
+                    size="table"
+                    onPress={choosable ? () => chooseTable(index) : undefined}
+                    choosable={choosable}
+                    style={hidden ? styles.hidden : undefined}
+                  />
+                  {stackSize > 1 ? (
+                    <Text style={styles.stackLabel}>
+                      {t('game.stack', { count: stackSize })}
+                    </Text>
+                  ) : null}
+                </LayoutAnchor>
+              );
+            })}
+            <LayoutAnchor
+              key={`table-slot-${game.table.length}`}
+              anchorKey={anchorKeys.table(game.table.length)}
+              style={styles.tableEmptySlot}
+            >
+              {null}
+            </LayoutAnchor>
+          </View>
+        </View>
+
+        <CollectedPileView cardIds={human.collected} playerIndex={humanIndex} />
 
         <View style={styles.bottomHandDock}>
           <View style={styles.sectionHeader}>
@@ -321,7 +329,7 @@ function GameScreenContent() {
             style={styles.playerHandFan}
           />
         </View>
-      </View>
+      </ScrollView>
 
       <GoStopModal
         visible={showGoStopModal}
@@ -385,8 +393,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'right',
   },
-  playArea: {
+  boardScroll: {
     flex: 1,
+  },
+  boardContent: {
+    paddingBottom: 24,
+    gap: 14,
   },
   topHandDock: {
     paddingTop: 4,
@@ -394,13 +406,6 @@ const styles = StyleSheet.create({
     gap: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(245, 230, 200, 0.15)',
-  },
-  middleScroll: {
-    flex: 1,
-  },
-  middleContent: {
-    paddingVertical: 12,
-    gap: 14,
   },
   bottomHandDock: {
     paddingTop: 10,
@@ -412,7 +417,7 @@ const styles = StyleSheet.create({
   },
   opponentBar: {
     paddingHorizontal: 16,
-    gap: 4,
+    gap: 2,
   },
   opponentInfo: {
     flexDirection: 'row',
@@ -437,6 +442,7 @@ const styles = StyleSheet.create({
   },
   aiHandFan: {
     alignSelf: 'center',
+    marginTop: -2,
   },
   playerHandFan: {
     alignSelf: 'center',
@@ -479,13 +485,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  tableField: {
-    gap: 8,
-  },
-  tableRow: {
+  tableHeaderMeta: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    alignItems: 'center',
+    gap: 12,
   },
   deckSlot: {
     alignItems: 'center',
@@ -494,9 +497,10 @@ const styles = StyleSheet.create({
   flippedSlot: {
     alignItems: 'center',
     gap: 2,
+    alignSelf: 'center',
   },
   tableGrid: {
-    flex: 1,
+    width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',

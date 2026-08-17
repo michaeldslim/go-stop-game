@@ -26,10 +26,18 @@ function fallbackPoint(): AnchorPoint {
   return { x: 200, y: 400 };
 }
 
+function waitForNextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
 export function useTurnAnimation({
   hapticsEnabled,
 }: UseTurnAnimationOptions) {
-  const { get } = useLayoutAnchors();
+  const { get, remeasureAll } = useLayoutAnchors();
   const [displayGame, setDisplayGame] = useState<MatgoGameState | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [activeFlight, setActiveFlight] = useState<ActiveFlight | null>(null);
@@ -84,13 +92,15 @@ export function useTurnAnimation({
           if (!cardId) {
             return null;
           }
-          const tableIndex = visual.table.findIndex((tableCard) => {
-            const ids = [tableCard.cardId, ...(tableCard.stackedCardIds ?? [])];
-            return ids.some((id) => step.cardIds.includes(id));
-          });
+          const tableIndex =
+            step.sourceTableIndex ??
+            visual.table.findIndex((tableCard) => {
+              const ids = [tableCard.cardId, ...(tableCard.stackedCardIds ?? [])];
+              return ids.some((id) => step.cardIds.includes(id));
+            });
           const from =
             tableIndex >= 0
-              ? resolveAnchor(anchorKeys.table(tableIndex))
+              ? resolveTableTarget(tableIndex)
               : resolveAnchor(anchorKeys.deck);
           return {
             id: `collect-${cardId}`,
@@ -148,6 +158,9 @@ export function useTurnAnimation({
         return visual;
       }
 
+      await waitForNextFrame();
+      await remeasureAll();
+
       const flight = resolveStepFlight(step, visual);
       if (flight) {
         await waitForFlight(flight);
@@ -155,7 +168,7 @@ export function useTurnAnimation({
 
       return applyVisualStep(visual, step);
     },
-    [hapticsEnabled, resolveStepFlight, waitForFlight],
+    [hapticsEnabled, remeasureAll, resolveStepFlight, waitForFlight],
   );
 
   const animateTurn = useCallback(
@@ -168,6 +181,8 @@ export function useTurnAnimation({
       setIsAnimating(true);
       let visual = before;
       setDisplayGame(before);
+      await waitForNextFrame();
+      await remeasureAll();
 
       for (const step of steps) {
         visual = await runStep(step, visual);
@@ -177,7 +192,7 @@ export function useTurnAnimation({
       setDisplayGame(after);
       setIsAnimating(false);
     },
-    [runStep],
+    [remeasureAll, runStep],
   );
 
   return {

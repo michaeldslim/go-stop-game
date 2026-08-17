@@ -9,6 +9,8 @@ export const CARD_DIMENSIONS: Record<CardSize, { width: number; height: number }
   small: { width: 44, height: 71 },
   /** Compact pile thumbnails for captured cards */
   pile: { width: 32, height: 52 },
+  /** Tiny face-down opponent hand cards */
+  mini: { width: 22, height: 36 },
 };
 
 export const CARD_BORDER_RADIUS = 6;
