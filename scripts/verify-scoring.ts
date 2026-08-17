@@ -13,15 +13,15 @@ assert(calculateScore(threeBrights).bright === 3, '3 brights without rain should
 assert(calculateScore(threeBrights).total === 3, '3 brights total should be 3');
 
 // 3 brights with rain = 2 (비광)
-const biGwang = ['jan-bright', 'mar-bright', 'dec-rain'];
+const biGwang = ['jan-bright', 'mar-bright', 'dec-bright'];
 assert(calculateScore(biGwang).bright === 2, '비광 should score 2');
 assert(calculateScore(biGwang).total === 2, '비광 total should be 2');
 
 // 4 brights in this deck (Jan, Mar, Aug, Dec rain) = 4 points
 const allBrights = CARD_CATALOG.filter((c) => c.type === 'bright').map((c) => c.id);
 assert(allBrights.length === 5, 'catalog has 5 bright cards');
-assert(calculateScore(allBrights).bright === 4, '4 brights should score 4');
-assert(calculateScore(allBrights).total === 4, '4 brights total should be 4');
+assert(calculateScore(allBrights).bright === 15, '5 brights should score 15');
+assert(calculateScore(allBrights).total === 15, '5 brights total should be 15');
 
 // Godori
 const godori = ['feb-animal', 'apr-animal', 'aug-animal'];
@@ -61,5 +61,9 @@ const base = calculateScore(threeBrights);
 assert(calculateScore(threeBrights, 1).total === base.total + 1, '1고 adds +1');
 assert(calculateScore(threeBrights, 2).total === base.total + 2, '2고 adds +2');
 assert(calculateScore(threeBrights, 3).total === (base.total + 2) * 2, '3고 doubles');
+
+// December 초단 counts toward 초단 yaku art only — not generic 띠 totals
+const decRibbonOnly = ['dec-ribbon'];
+assert(calculateScore(decRibbonOnly).ribbon === 0, 'dec ribbon excluded from 띠 count');
 
 console.log('All scoring checks passed.');

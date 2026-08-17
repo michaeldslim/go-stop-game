@@ -78,7 +78,7 @@ const SOURCE_ENTRIES = [
   ['500px-Hwatu_November_Kasu_2.svg.webp', 'nov-junk-2'],
   ['500px-Hwatu_November_Kasu_3.svg.webp', 'nov-junk-double'],
 
-  ['500px-Hwatu_December_Hikari.svg.webp', 'dec-rain'],
+  ['500px-Hwatu_December_Hikari.svg.webp', 'dec-bright'],
   ['500px-Hwatu_December_Kasu.svg.webp', 'dec-animal'],
   ['500px-Hwatu_December_Tane.svg.webp', 'dec-ribbon'],
   ['500px-Hwatu_December_Tanzaku.svg.webp', 'dec-junk-double'],
@@ -98,7 +98,7 @@ const EXPECTED_IDS = [
   'sep-junk-double', 'sep-ribbon', 'sep-junk-1', 'sep-junk-2',
   'oct-animal', 'oct-junk-1', 'oct-junk-2', 'oct-ribbon',
   'nov-bright', 'nov-junk-1', 'nov-junk-2', 'nov-junk-double',
-  'dec-rain', 'dec-animal', 'dec-ribbon', 'dec-junk-double',
+  'dec-bright', 'dec-animal', 'dec-ribbon', 'dec-junk-double',
 ];
 
 async function convertWebpToPng(srcPath, destPath) {

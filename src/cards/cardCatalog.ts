@@ -52,8 +52,8 @@ export const CARD_CATALOG: CardDefinition[] = [
   makeCard(4, 'junk-1', 'junk', { en: 'Wisteria Junk', ko: '등 피' }),
   makeCard(4, 'junk-2', 'junk', { en: 'Wisteria Junk', ko: '등 피' }),
 
-  // May
-  makeCard(5, 'animal', 'animal', { en: 'Iris Animal', ko: '참새' }),
+  // May — iris + bridge (난초); Japanese tane, not a bird
+  makeCard(5, 'animal', 'animal', { en: 'Iris Bridge', ko: '난초' }),
   makeCard(5, 'ribbon', 'ribbon', { en: 'Blue Ribbon', ko: '청단 띠' }, { flags: { cheongdan: true } }),
   makeCard(5, 'junk-1', 'junk', { en: 'Iris Junk', ko: '붓꽃 피' }),
   makeCard(5, 'junk-2', 'junk', { en: 'Iris Junk', ko: '붓꽃 피' }),
@@ -100,10 +100,16 @@ export const CARD_CATALOG: CardDefinition[] = [
   makeCard(11, 'junk-2', 'junk', { en: 'Willow Junk', ko: '오동 피' }),
   { ...makeCard(11, 'junk-double', 'junk', { en: 'Double Junk', ko: '쌍피' }), piValue: 2 },
 
-  // December
-  makeCard(12, 'rain', 'bright', { en: 'Rain Bright', ko: '비광' }, { flags: { rainBright: true } }),
-  makeCard(12, 'junk-1', 'junk', { en: 'Rain Junk', ko: '비 피' }),
-  makeCard(12, 'junk-2', 'junk', { en: 'Rain Junk', ko: '비 피' }),
+  // December — 비광, 비도리, 초단 (not counted as 띠), 쌍피
+  makeCard(12, 'bright', 'bright', { en: 'Rain Bright', ko: '비광' }, { flags: { rainBright: true } }),
+  makeCard(12, 'animal', 'animal', { en: 'Rain Bird', ko: '비도리' }),
+  makeCard(
+    12,
+    'ribbon',
+    'ribbon',
+    { en: 'Rain Ribbon', ko: '초단 띠' },
+    { flags: { excludeRibbonCount: true } },
+  ),
   { ...makeCard(12, 'junk-double', 'junk', { en: 'Double Junk', ko: '쌍피' }), piValue: 2 },
 ];
 

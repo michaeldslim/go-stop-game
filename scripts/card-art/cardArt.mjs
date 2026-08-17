@@ -332,23 +332,22 @@ export const CARD_ART = {
   `)),
 
   // ── December (Rain / Paulownia) ──
-  'dec-rain': () => wrapSvg(baseCard(`
+  'dec-bright': () => wrapSvg(baseCard(`
     ${rainLines()}
     ${brightDisc(420, 200, 75)}
     ${paulowniaLeaves(300, 520, 1.5, 3)}
     ${branchLine(180, 680, 420, 660, 5)}
   `)),
 
-  'dec-junk-1': () => wrapSvg(baseCard(`
-    ${paulowniaLeaves(300, 440, 1.6, 3)}
-    ${branchLine(180, 580, 420, 560, 5)}
-    ${paulowniaLeaves(220, 660, 1.1, 2)}
+  'dec-animal': () => wrapSvg(baseCard(`
+    ${willowBranch(300, 400, 1.5)}
+    ${raven(300, 300, 1.4)}
   `)),
 
-  'dec-junk-2': () => wrapSvg(baseCard(`
-    ${paulowniaLeaves(280, 420, 1.5, 2)}
-    ${paulowniaLeaves(360, 460, 1.3, 2)}
-    ${paulowniaLeaves(300, 620, 1.2, 2)}
+  'dec-ribbon': () => wrapSvg(baseCard(`
+    ${willowBranch(280, 400, 1.3)}
+    ${ribbonChodan()}
+    ${willowBranch(300, 620, 1.1)}
   `)),
 
   'dec-junk-double': () => wrapSvg(baseCard(`

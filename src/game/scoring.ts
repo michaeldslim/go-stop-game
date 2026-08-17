@@ -62,7 +62,9 @@ function countByType(
         animals += 1;
         break;
       case 'ribbon':
-        ribbons += 1;
+        if (!card.flags?.excludeRibbonCount) {
+          ribbons += 1;
+        }
         break;
       case 'junk':
         pi += card.piValue;
