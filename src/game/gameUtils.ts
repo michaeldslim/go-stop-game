@@ -36,23 +36,6 @@ export function opponentIndices(state: MatgoGameState, playerIndex: PlayerIndex)
   return state.players.map((_, index) => index).filter((index) => index !== playerIndex);
 }
 
-/** @deprecated Use nextPlayerIndex — kept for 2P call sites during migration */
-export function opponentIndex(playerIndex: PlayerIndex): PlayerIndex {
-  return playerIndex === 0 ? 1 : 0;
-}
-
-export function isGamePlayable(state: MatgoGameState): boolean {
-  return state.phase === 'playing' && state.pendingAction === null;
-}
-
 export function allHandsEmpty(state: MatgoGameState): boolean {
   return state.players.every((player) => player.hand.length === 0);
-}
-
-export function getHumanPlayer(state: MatgoGameState): PlayerState {
-  return state.players.find((player) => player.isHuman) ?? state.players[0];
-}
-
-export function getAiPlayers(state: MatgoGameState): PlayerState[] {
-  return state.players.filter((player) => !player.isHuman);
 }

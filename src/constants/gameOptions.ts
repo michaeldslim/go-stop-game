@@ -131,7 +131,3 @@ export function getLocalizedText(language: AppLanguage, labels: LocalizedLabel):
 export function getAiDifficultyOption(difficulty: AiDifficulty): AiDifficultyOption {
   return AI_DIFFICULTY_OPTIONS.find((option) => option.value === difficulty) ?? AI_DIFFICULTY_OPTIONS[1];
 }
-
-export function getGameModeOption(mode: GameMode): GameModeOption {
-  return GAME_MODE_OPTIONS.find((option) => option.value === mode) ?? GAME_MODE_OPTIONS[0];
-}

@@ -28,11 +28,6 @@ export interface AppSettings {
   hapticsEnabled: boolean;
 }
 
-export interface GameSetupConfig {
-  mode: GameMode;
-  aiDifficulty: AiDifficulty;
-}
-
 export const DEFAULT_SETTINGS: AppSettings = {
   language: 'ko',
   defaultAiDifficulty: 'intermediate',

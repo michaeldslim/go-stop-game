@@ -1,6 +1,5 @@
-import type { MatgoGameState, PlayerIndex } from '../types/gameState';
+import type { MatgoGameState } from '../types/gameState';
 import { getCardById } from '../cards/getCardById';
-import { calculateScore } from './scoring';
 import { findTableMatchIndices } from './tableCards';
 import { getBestHandCard, getBestTableIndex } from './hint';
 import {
@@ -129,14 +128,4 @@ export function runAiTurn(state: MatgoGameState): MatgoGameState {
   }
 
   return next;
-}
-
-export function estimateAiYakuStrength(state: MatgoGameState, playerIndex: PlayerIndex): number {
-  const player = state.players[playerIndex];
-  return calculateScore(
-    player.collected,
-    player.goCount,
-    player.bonusPi,
-    player.flexCardRoles,
-  ).total;
 }

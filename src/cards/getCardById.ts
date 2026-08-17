@@ -9,7 +9,3 @@ export function getCardById(cardId: CardId): CardDefinition {
   }
   return card;
 }
-
-export function getCardsByIds(cardIds: CardId[]): CardDefinition[] {
-  return cardIds.map(getCardById);
-}

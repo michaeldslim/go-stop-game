@@ -1,4 +1,3 @@
-import type { AiDifficulty } from '../types/game';
 import type { MatgoGameState, PlayerIndex } from '../types/gameState';
 import { allHandsEmpty, cloneGameState } from './gameUtils';
 import { syncPlayerScore } from './scoring';
@@ -97,17 +96,6 @@ export function declareGo(state: MatgoGameState, playerIndex: PlayerIndex): Matg
   };
 }
 
-export function resolveGoStopForAi(state: MatgoGameState): MatgoGameState {
-  const playerIndex = state.goStopPlayerIndex;
-  if (playerIndex === null) {
-    return state;
-  }
-
-  return shouldAiGo(state, playerIndex)
-    ? declareGo(state, playerIndex)
-    : declareStop(state, playerIndex);
-}
-
 export function maybePromptGoStop(
   state: MatgoGameState,
   playerIndex: PlayerIndex,
@@ -198,14 +186,4 @@ export function finishHandsEmpty(state: MatgoGameState): MatgoGameState {
     finishReason: 'nagari',
     statusMessage: '나가리 — no one reached target',
   };
-}
-
-export function getAiGoStopLabel(difficulty: AiDifficulty, language: 'en' | 'ko'): string {
-  const labels: Record<AiDifficulty, { en: string; ko: string }> = {
-    beginner: { en: 'Stops early', ko: '일찍 스톱' },
-    intermediate: { en: 'Balanced Go/Stop', ko: '균형 고/스톱' },
-    advanced: { en: 'Aggressive Go', ko: '공격적 고' },
-    expert: { en: 'Optimal Go/Stop', ko: '최적 고/스톱' },
-  };
-  return labels[difficulty][language];
 }

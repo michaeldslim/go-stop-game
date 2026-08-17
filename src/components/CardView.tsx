@@ -102,9 +102,6 @@ export function CardView({
   );
 }
 
-/** Alias matching plan naming */
-export const Card = CardView;
-
 const styles = StyleSheet.create({
   card: {
     borderRadius: CARD_BORDER_RADIUS,

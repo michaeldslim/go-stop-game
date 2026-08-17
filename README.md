@@ -17,11 +17,23 @@ See [`.cursor/plans/hwatu-mobile-app.mdc`](.cursor/plans/hwatu-mobile-app.mdc) f
 
 ## Card Assets
 
-High-quality card images go in `assets/cards/master/` (600×960 PNG). Run:
+High-quality card images go in `assets/cards/master/` (512×839 PNG). After import or editing masters:
 
 ```bash
 chmod +x scripts/generate-card-sizes.sh
-./scripts/generate-card-sizes.sh
+npm run resize:cards
+```
+
+Or import from staged WebP sources:
+
+```bash
+npm run import:cards
+```
+
+Domain invariant checks (deal, scoring, turn engine):
+
+```bash
+npm run verify
 ```
 
 ### First-time Android setup

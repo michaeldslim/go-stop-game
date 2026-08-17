@@ -8,7 +8,7 @@ export const YAKU_TYPES: YakuType[] = ['godori', 'hongdan', 'cheongdan', 'chodan
 /** Minimum cards to complete each yaku (고도리 / 홍단 / 청단 / 초단). */
 export const YAKU_COMPLETE_COUNT = 3;
 
-export function detectCompletedYaku(
+function detectCompletedYaku(
   before: ReturnType<typeof countYakuProgress>,
   after: ReturnType<typeof countYakuProgress>,
 ): YakuType[] {

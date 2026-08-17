@@ -164,15 +164,3 @@ export function createMatgoGame(options: {
     rng: options.rng,
   });
 }
-
-export function getHumanPlayer(game: MatgoGameState) {
-  return game.players.find((player) => player.isHuman) ?? game.players[0];
-}
-
-export function getAiPlayer(game: MatgoGameState) {
-  return game.players.find((player) => !player.isHuman) ?? game.players[1];
-}
-
-export function getTableCardIds(game: MatgoGameState): string[] {
-  return game.table.map((tableCard) => tableCard.cardId);
-}

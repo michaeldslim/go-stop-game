@@ -206,9 +206,9 @@ assets/
     ATTRIBUTION.md    # CC BY-SA 4.0 credit
 scripts/
   import-card-source.mjs   # optional: WebP staging → master PNG
-  generate-card-sizes.sh     # master → 1x/2x/3x (sips)
-  generate-placeholder-cards.mjs  # legacy SVG generator (unused)
-  verify-matgo-deal.ts     # deal invariant checks (10+10 hand, 8 table, 20 deck)
+  generate-card-sizes.sh     # master → 1x/2x/3x (sips); `npm run resize:cards`
+  generate-app-icons.mjs   # app icon + splash from card art
+  verify-matgo-deal.ts     # deal invariant checks — `npm run verify`
   verify-turn-engine.ts    # turn play conserves 48 cards across simulated games
   verify-scoring.ts        # yaku + Go bonus scoring checks
 src/

@@ -621,6 +621,3 @@ export function getPendingTableChoice(state: MatgoGameState): {
 export function needsHumanSepCupChoice(state: MatgoGameState): boolean {
   return state.pendingAction?.type === 'chooseSepCupRole' && state.players[state.pendingAction.playerIndex].isHuman;
 }
-
-// Re-export for tests
-export { flipDeckCard as flipDeckCardForTest };

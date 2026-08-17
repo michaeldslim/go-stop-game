@@ -1,11 +1,7 @@
 import { compareDealerCards } from './cardRank';
 import {
-  GOSTOP_HAND_SIZE,
   GOSTOP_PLAYER_COUNT,
-  GOSTOP_TABLE_SIZE,
-  MATGO_HAND_SIZE,
   MATGO_PLAYER_COUNT,
-  MATGO_TABLE_SIZE,
 } from './constants';
 import { drawCards } from './deck';
 import type { CardId } from '../types/gameState';
