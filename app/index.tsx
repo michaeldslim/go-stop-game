@@ -49,7 +49,11 @@ export default function HomeScreen() {
         <View style={styles.titleGroup}>
           <Text style={styles.title}>{t('home.title')}</Text>
           <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
-          {careerBadge ? <Text style={styles.careerBadge}>{careerBadge}</Text> : null}
+          {careerBadge ? (
+            <Pressable accessibilityRole="button" onPress={() => router.push('/career')}>
+              <Text style={styles.careerBadge}>{careerBadge}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -64,6 +68,11 @@ export default function HomeScreen() {
         <Pressable style={styles.secondaryButton} onPress={() => router.push('/rules')}>
           <Text style={styles.secondaryButtonText}>{t('home.howToPlay')}</Text>
         </Pressable>
+        {settings.careerModeEnabled && careerLoaded ? (
+          <Pressable style={styles.secondaryButton} onPress={() => router.push('/career')}>
+            <Text style={styles.secondaryButtonText}>{t('home.career')}</Text>
+          </Pressable>
+        ) : null}
         <Pressable style={styles.tertiaryButton} onPress={() => router.push('/settings')}>
           <Text style={styles.tertiaryButtonText}>{t('home.settings')}</Text>
         </Pressable>

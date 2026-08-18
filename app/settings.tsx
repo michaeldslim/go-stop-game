@@ -3,6 +3,10 @@ import { useRouter } from 'expo-router';
 import { ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OptionPicker } from '../src/components/OptionPicker';
+import {
+  CareerDifficultyBanner,
+  difficultyLabel,
+} from '../src/components/CareerDifficultyBanner';
 import { ScreenHeader } from '../src/components/ScreenHeader';
 import { SettingsToggleRow } from '../src/components/SettingsToggleRow';
 import { SettingsVolumeSlider } from '../src/components/SettingsVolumeSlider';
@@ -14,6 +18,9 @@ import {
   LANGUAGE_OPTIONS,
 } from '../src/constants/gameOptions';
 import { colors } from '../src/constants/colors';
+import { getDifficultySuggestion } from '../src/career/careerDifficultySuggestion';
+import { careerRankKey } from '../src/career/careerLabels';
+import { useCareer } from '../src/career/CareerProvider';
 import { useTranslation } from '../src/i18n/useTranslation';
 import { useGameSounds } from '../src/audio/GameSoundsProvider';
 import { useSettings } from '../src/settings/SettingsProvider';
@@ -22,9 +29,14 @@ import type { AiDifficulty, AppLanguage, GameMode, GameSpeed } from '../src/type
 export default function SettingsScreen() {
   const router = useRouter();
   const { settings, updateSettings } = useSettings();
+  const { careerState, loaded: careerLoaded } = useCareer();
   const { t, language } = useTranslation();
   const { previewAtVolume } = useGameSounds();
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const difficultySuggestion =
+    settings.careerModeEnabled && careerLoaded
+      ? getDifficultySuggestion(careerState.rank, settings.defaultAiDifficulty)
+      : null;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -55,6 +67,20 @@ export default function SettingsScreen() {
             subtitle: getLocalizedText(language, option.description),
           }))}
         />
+
+        {difficultySuggestion ? (
+          <CareerDifficultyBanner
+            message={t('career.difficultySuggest.body', {
+              rank: t(careerRankKey(careerState.rank)),
+              difficulty: difficultyLabel(language, difficultySuggestion.recommended),
+            })}
+            actionLabel={t('career.difficultySuggest.action', {
+              difficulty: difficultyLabel(language, difficultySuggestion.recommended),
+            })}
+            recommendedDifficulty={difficultySuggestion.recommended}
+            onApply={(difficulty) => updateSettings({ defaultAiDifficulty: difficulty })}
+          />
+        ) : null}
 
         <OptionPicker<GameMode>
           label={t('setup.gameMode')}
@@ -96,6 +122,9 @@ export default function SettingsScreen() {
                 onPress={() => router.push({ pathname: '/rules', params: { section: 'career' } })}
               >
                 <Text style={styles.careerLink}>{t('career.rulesLink')}</Text>
+              </Pressable>
+              <Pressable accessibilityRole="link" onPress={() => router.push('/career')}>
+                <Text style={styles.careerLink}>{t('home.career')}</Text>
               </Pressable>
             </View>
           ) : null}

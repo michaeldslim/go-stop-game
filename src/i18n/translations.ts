@@ -6,6 +6,7 @@ export type TranslationKey =
   | 'home.play'
   | 'home.howToPlay'
   | 'home.settings'
+  | 'home.career'
   | 'setup.gameMode'
   | 'setup.aiDifficulty'
   | 'setup.comingSoon'
@@ -113,6 +114,23 @@ export type TranslationKey =
   | 'career.modeDesc'
   | 'career.rulesSnippet'
   | 'career.rulesLink'
+  | 'career.screen.title'
+  | 'career.screen.currentRank'
+  | 'career.screen.highestRank'
+  | 'career.screen.ladderTitle'
+  | 'career.screen.disabledTitle'
+  | 'career.screen.disabledBody'
+  | 'career.screen.enableInSettings'
+  | 'career.screen.viewRules'
+  | 'career.ladder.achieved'
+  | 'career.ladder.current'
+  | 'career.ladder.locked'
+  | 'career.ladder.startingRank'
+  | 'career.ladder.requirement'
+  | 'career.ladder.requirementDifficulty'
+  | 'career.ladder.progressToNext'
+  | 'career.difficultySuggest.body'
+  | 'career.difficultySuggest.action'
   | 'settings.career';
 
 type TranslationParams = Record<string, string | number>;
@@ -123,6 +141,7 @@ const en: Record<TranslationKey, string> = {
   'home.play': 'Play',
   'home.howToPlay': 'How to Play',
   'home.settings': '설정 / Settings',
+  'home.career': 'Career Progress',
   'setup.gameMode': 'Game Mode',
   'setup.aiDifficulty': 'AI Difficulty',
   'setup.comingSoon': 'Coming soon',
@@ -249,6 +268,24 @@ const en: Record<TranslationKey, string> = {
   'career.rulesSnippet':
     'Intern→Staff 3 wins · Staff→Assistant 5 · Assistant→Manager 7 · Manager→Deputy 10 · Deputy+ needs higher AI difficulty. Losses do not reset progress.',
   'career.rulesLink': 'View promotion rules',
+  'career.screen.title': 'Career',
+  'career.screen.currentRank': 'Current rank',
+  'career.screen.highestRank': 'Highest achieved',
+  'career.screen.ladderTitle': 'Rank ladder',
+  'career.screen.disabledTitle': 'Career mode is off',
+  'career.screen.disabledBody': 'Turn on Career mode in Settings to track your rank and promotion progress.',
+  'career.screen.enableInSettings': 'Open Settings',
+  'career.screen.viewRules': 'Promotion rules',
+  'career.ladder.achieved': 'Achieved',
+  'career.ladder.current': 'Current',
+  'career.ladder.locked': 'Locked',
+  'career.ladder.startingRank': 'Starting rank',
+  'career.ladder.requirement': '{wins} wins to reach',
+  'career.ladder.requirementDifficulty': '{wins} wins at {difficulty}+ to reach',
+  'career.ladder.progressToNext': '{current}/{required} wins → {nextRank}',
+  'career.difficultySuggest.body':
+    'From {rank} onward, promotion wins only count at {difficulty}+ AI. Your default is lower — bump it to keep progressing.',
+  'career.difficultySuggest.action': 'Set default to {difficulty}',
   'settings.career': 'Career',
 };
 
@@ -258,6 +295,7 @@ const ko: Record<TranslationKey, string> = {
   'home.play': '플레이',
   'home.howToPlay': '게임 방법',
   'home.settings': '설정 / Settings',
+  'home.career': '승진 현황',
   'setup.gameMode': '게임 모드',
   'setup.aiDifficulty': 'AI 난이도',
   'setup.comingSoon': '준비 중',
@@ -384,6 +422,24 @@ const ko: Record<TranslationKey, string> = {
   'career.rulesSnippet':
     '인턴→사원 3승 · 사원→대리 5 · 대리→과장 7 · 과장→차장 10 · 차장+는 더 높은 AI 난이도 필요. 패배해도 진행은 유지됩니다.',
   'career.rulesLink': '승진 규칙 보기',
+  'career.screen.title': '승진 현황',
+  'career.screen.currentRank': '현재 직급',
+  'career.screen.highestRank': '최고 직급',
+  'career.screen.ladderTitle': '직급 사다리',
+  'career.screen.disabledTitle': '승진 모드가 꺼져 있습니다',
+  'career.screen.disabledBody': '설정에서 승진 모드를 켜면 직급과 승진 진행을 기록합니다.',
+  'career.screen.enableInSettings': '설정 열기',
+  'career.screen.viewRules': '승진 규칙',
+  'career.ladder.achieved': '달성',
+  'career.ladder.current': '현재',
+  'career.ladder.locked': '미달성',
+  'career.ladder.startingRank': '시작 직급',
+  'career.ladder.requirement': '승진 조건: {wins}승',
+  'career.ladder.requirementDifficulty': '승진 조건: {difficulty} 이상 {wins}승',
+  'career.ladder.progressToNext': '{current}/{required}승 → {nextRank}',
+  'career.difficultySuggest.body':
+    '{rank}부터 승진 카운트는 {difficulty} 이상 AI 승리만 인정됩니다. 기본 난이도가 낮아요 — 올리면 승진이 쌓입니다.',
+  'career.difficultySuggest.action': '기본 난이도 {difficulty}으로 변경',
   'settings.career': '승진제',
 };
 

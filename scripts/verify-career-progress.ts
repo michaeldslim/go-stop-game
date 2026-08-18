@@ -1,4 +1,8 @@
 import { applyMatchResult, DEFAULT_CAREER_STATE } from '../src/career/careerProgress';
+import {
+  getDifficultySuggestion,
+  isCareerRankDeputyOrHigher,
+} from '../src/career/careerDifficultySuggestion';
 import type { CareerState } from '../src/types/career';
 
 function assert(condition: boolean, message: string): void {
@@ -89,5 +93,17 @@ let ceoState = { rank: 'ceo' as const, promotionWins: 0, highestRankAchieved: 'c
 const ceoWin = applyMatchResult(ceoState, { won: true, aiDifficulty: 'expert' });
 assert(ceoWin.promoted === null, 'ceo should not promote further');
 assert(ceoWin.nextState.rank === 'ceo', 'ceo rank should remain');
+
+assert(!isCareerRankDeputyOrHigher('manager'), 'manager should be below deputy gate');
+assert(isCareerRankDeputyOrHigher('deputy'), 'deputy should trigger deputy+ gate');
+
+const deputySuggestion = getDifficultySuggestion('deputy', 'beginner');
+assert(deputySuggestion?.recommended === 'intermediate', 'deputy should suggest intermediate');
+
+const directorSuggestion = getDifficultySuggestion('director', 'intermediate');
+assert(directorSuggestion?.recommended === 'advanced', 'director should suggest advanced');
+
+const noSuggestion = getDifficultySuggestion('deputy', 'intermediate');
+assert(noSuggestion === null, 'intermediate should not suggest bump at deputy');
 
 console.log('All career progress checks passed.');

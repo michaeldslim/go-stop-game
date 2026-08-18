@@ -65,6 +65,15 @@ export function rankIndex(rank: CareerRank): number {
   return CAREER_RANK_ORDER.indexOf(rank);
 }
 
+export function getRequirementToReachRank(rank: CareerRank): PromotionTarget | null {
+  const index = CAREER_RANK_ORDER.indexOf(rank);
+  if (index <= 0) {
+    return null;
+  }
+
+  return getPromotionTarget(CAREER_RANK_ORDER[index - 1]);
+}
+
 export function isHigherRank(left: CareerRank, right: CareerRank): boolean {
   return rankIndex(left) > rankIndex(right);
 }

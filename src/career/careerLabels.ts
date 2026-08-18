@@ -2,7 +2,7 @@ import { AI_DIFFICULTY_OPTIONS, getLocalizedText } from '../constants/gameOption
 import type { TranslationKey } from '../i18n/translations';
 import type { AppLanguage } from '../types/game';
 import type { CareerRank, CareerState, PromotionResult } from '../types/career';
-import { getPromotionTarget } from './careerRules';
+import { CAREER_RANK_ORDER, getPromotionTarget, getRequirementToReachRank, rankIndex } from './careerRules';
 
 export const CAREER_RANK_KEYS: Record<CareerRank, TranslationKey> = {
   intern: 'career.rank.intern',
@@ -89,4 +89,45 @@ export function getCareerResultMessage(
   }
 
   return getCareerProgressCopy(t, result.nextState).primary;
+}
+
+export function getPromotionRequirementCopy(
+  t: TranslateFn,
+  language: AppLanguage,
+  rank: CareerRank,
+): string | null {
+  const requirement = getRequirementToReachRank(rank);
+  if (!requirement) {
+    return null;
+  }
+
+  if (requirement.minAiDifficulty) {
+    return t('career.ladder.requirementDifficulty', {
+      wins: requirement.requiredWins,
+      difficulty: minDifficultyLabel(language, requirement.minAiDifficulty),
+    });
+  }
+
+  return t('career.ladder.requirement', { wins: requirement.requiredWins });
+}
+
+export type CareerLadderStatus = 'achieved' | 'current' | 'locked';
+
+export function getCareerLadderStatus(state: CareerState, rank: CareerRank): CareerLadderStatus {
+  const currentIndex = rankIndex(state.rank);
+  const rowIndex = rankIndex(rank);
+
+  if (rowIndex < currentIndex) {
+    return 'achieved';
+  }
+
+  if (rowIndex === currentIndex) {
+    return 'current';
+  }
+
+  return 'locked';
+}
+
+export function getCareerLadderRows(): CareerRank[] {
+  return [...CAREER_RANK_ORDER].reverse();
 }
