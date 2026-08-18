@@ -37,10 +37,11 @@
     "resize:cards": "./scripts/generate-card-sizes.sh",
     "import:cards": "node scripts/import-card-source.mjs",
     "generate:icons": "node scripts/generate-app-icons.mjs",
-    "verify": "npx tsx scripts/verify-matgo-deal.ts && npx tsx scripts/verify-scoring.ts && npx tsx scripts/verify-turn-engine.ts",
+    "verify": "npx tsx scripts/verify-matgo-deal.ts && npx tsx scripts/verify-scoring.ts && npx tsx scripts/verify-turn-engine.ts && npx tsx scripts/verify-career-progress.ts",
     "verify:deal": "npx tsx scripts/verify-matgo-deal.ts",
     "verify:scoring": "npx tsx scripts/verify-scoring.ts",
-    "verify:turn": "npx tsx scripts/verify-turn-engine.ts"
+    "verify:turn": "npx tsx scripts/verify-turn-engine.ts",
+    "verify:career": "npx tsx scripts/verify-career-progress.ts"
   },
   "private": true
 }
