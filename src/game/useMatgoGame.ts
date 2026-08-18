@@ -12,6 +12,7 @@ import {
   canPlayHandCard,
   chooseSepCupRole,
   chooseTableForPending,
+  ensurePlayableTurn,
   getPlayableHandCardIds,
   isAiTurn,
   isHumanTurn,
@@ -318,6 +319,17 @@ export function useMatgoGame(
     }
     void playEffects(['goStop']);
   }, [game.phase, game.goStopPlayerIndex, humanIndex, playEffects]);
+
+  useEffect(() => {
+    if (isAnimating || game.phase !== 'playing' || game.pendingAction) {
+      return;
+    }
+
+    const normalized = ensurePlayableTurn(game);
+    if (normalized !== game) {
+      dispatch({ type: 'SYNC', state: normalized });
+    }
+  }, [game, isAnimating]);
 
   useEffect(() => {
     if (!isAiTurn(game) || isAnimating) {

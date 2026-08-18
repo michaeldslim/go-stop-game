@@ -39,3 +39,23 @@ export function opponentIndices(state: MatgoGameState, playerIndex: PlayerIndex)
 export function allHandsEmpty(state: MatgoGameState): boolean {
   return state.players.every((player) => player.hand.length === 0);
 }
+
+/** Next player who still has cards to play; null when every hand is empty. */
+export function nextPlayerWithCards(
+  state: MatgoGameState,
+  fromIndex: PlayerIndex,
+): PlayerIndex | null {
+  if (allHandsEmpty(state)) {
+    return null;
+  }
+
+  let nextIndex = fromIndex;
+  for (let step = 0; step < state.playerCount; step += 1) {
+    nextIndex = (nextIndex + 1) % state.playerCount;
+    if (state.players[nextIndex].hand.length > 0) {
+      return nextIndex;
+    }
+  }
+
+  return null;
+}

@@ -1,6 +1,11 @@
 import type { CardId, GameSoundEffect, MatgoGameState, PendingAction, PlayerState, SepCupRole } from '../types/gameState';
 import { finishHandsEmpty, maybePromptGoStop } from './goStop';
-import { cloneGameState, getCurrentPlayer, nextPlayerIndex as getNextPlayerIndex } from './gameUtils';
+import {
+  allHandsEmpty,
+  cloneGameState,
+  getCurrentPlayer,
+  nextPlayerWithCards,
+} from './gameUtils';
 import {
   addTableCard,
   createStackedTableCard,
@@ -113,23 +118,39 @@ function endTurn(state: MatgoGameState, playerIndex: number): MatgoGameState {
 }
 
 function advanceTurn(state: MatgoGameState): MatgoGameState {
-  const nextPlayerIndex = getNextPlayerIndex(state, state.currentPlayerIndex);
-  const next = finishHandsEmpty({
+  if (allHandsEmpty(state)) {
+    return finishHandsEmpty(state);
+  }
+
+  const nextPlayerIndex = nextPlayerWithCards(state, state.currentPlayerIndex);
+  if (nextPlayerIndex === null) {
+    return finishHandsEmpty(state);
+  }
+
+  const next = {
     ...state,
     currentPlayerIndex: nextPlayerIndex,
     pendingAction: null,
     lastFlippedCardId: null,
-  });
-
-  if (next.phase === 'finished') {
-    return next;
-  }
+  };
 
   const nextPlayer = next.players[nextPlayerIndex];
   return setStatus(
     next,
     nextPlayer.isHuman ? 'Your turn — play a card' : 'AI is playing…',
   );
+}
+
+export function ensurePlayableTurn(state: MatgoGameState): MatgoGameState {
+  if (state.phase !== 'playing' || state.pendingAction) {
+    return state;
+  }
+
+  if (state.players[state.currentPlayerIndex].hand.length > 0) {
+    return state;
+  }
+
+  return advanceTurn(clearTurnFlags(state));
 }
 
 function collectFromTable(
@@ -422,6 +443,8 @@ export function playHandCard(
   handCardId: CardId,
   tableIndex?: number,
 ): MatgoGameState {
+  state = ensurePlayableTurn(state);
+
   if (state.phase !== 'playing') {
     return state;
   }

@@ -4,7 +4,8 @@
  */
 import { createMatgoGame } from '../src/game/createGame';
 import { runAiTurn } from '../src/game/ai';
-import { chooseTableForPending, playHandCard } from '../src/game/turnEngine';
+import { chooseTableForPending, ensurePlayableTurn, playHandCard } from '../src/game/turnEngine';
+import { nextPlayerWithCards } from '../src/game/gameUtils';
 import type { MatgoGameState } from '../src/types/gameState';
 
 function mulberry32(seed: number): () => number {
@@ -50,6 +51,10 @@ for (let seed = 0; seed < 50; seed += 1) {
 
     const player = state.players[state.currentPlayerIndex];
     if (player.hand.length === 0) {
+      console.error(
+        `seed ${seed} turn ${turn}: player ${state.currentPlayerIndex} has no cards on their turn`,
+      );
+      failures += 1;
       break;
     }
 
@@ -88,6 +93,54 @@ if (played.deck.length !== base.deck.length - 1 && base.deck.length > 0) {
   // Hand play should flip unless deck was empty (not here).
   if (base.deck.length > 0 && played.lastFlippedCardId === null && played.pendingAction === null) {
     console.error('Expected a flip after hand play');
+    failures += 1;
+  }
+}
+
+if (failures > 0) {
+  console.error(`FAILED with ${failures} errors`);
+  process.exit(1);
+}
+
+// Regression: when one player runs out of cards first, turn skips to the opponent.
+{
+  const base = createMatgoGame({ aiDifficulty: 'beginner', rng: () => 0.42 });
+  const stuckState: MatgoGameState = {
+    ...base,
+    players: [
+      { ...base.players[0], hand: [] },
+      { ...base.players[1], hand: ['jan-bright', 'feb-ribbon'] },
+    ],
+    currentPlayerIndex: 0,
+    phase: 'playing',
+    pendingAction: null,
+  };
+
+  const nextIndex = nextPlayerWithCards(stuckState, stuckState.currentPlayerIndex);
+  if (nextIndex !== 1) {
+    console.error(`Expected turn to skip to AI (index 1), got ${nextIndex}`);
+    failures += 1;
+  }
+
+  // Simulate AI finishing its turn — should not land on empty-handed human.
+  const playable = ensurePlayableTurn(stuckState);
+  let afterAi = runAiTurn(playable);
+  while (afterAi.pendingAction) {
+    if (
+      afterAi.pendingAction.type === 'chooseHandMatch' ||
+      afterAi.pendingAction.type === 'chooseFlipMatch'
+    ) {
+      afterAi = chooseTableForPending(afterAi, afterAi.pendingAction.matchIndices[0]);
+    } else {
+      break;
+    }
+  }
+
+  if (
+    afterAi.phase === 'playing' &&
+    afterAi.players[afterAi.currentPlayerIndex].hand.length === 0
+  ) {
+    console.error('After AI turn, current player still has an empty hand');
     failures += 1;
   }
 }
