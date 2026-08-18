@@ -48,11 +48,9 @@ npx expo run:android
 ## EAS Build
 
 ```bash
-# Internal test APK
-eas build -p android --profile preview
-
-# Play Store AAB
-eas build -p android --profile production
+eas build --platform android --profile production
+eas build --platform ios --profile production
+eas build --platform all --profile production
 ```
 
 ### OTA Update (JS-only changes)
