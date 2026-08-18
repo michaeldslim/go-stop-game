@@ -1,6 +1,6 @@
 ---
 name: Hwatu Mobile App
-overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약 콜아웃·gather-long·손패 가로 스크롤·보드 세로 스크롤(3P)·애니 앵커 remeasure·collect sourceTableIndex·AI 손패 mini·턴 페이싱(수집 전 0.5s·AI 1.2s)·playHand 타겟 슬롯 수정·특수기술 모달. Post-Phase 4 — 턴 힌트(설정 토글·시안 글로우·점수+약 진행 휴리스틱). Phase 5 — EAS 빌드·스토어 배포. Post-Phase 5 (design) — **승진제** 메타 진행(인턴→사장, 연승·난이도 조건); 판 내 점수(yaku)는 유지. 딜 애니메이션·조커 카드는 미구현(optional).
+overview: React Native + Expo + TypeScript. 항상 Human vs AI. Phase 4 완료 — 고스톱 3P·화투 심플·고급 규칙(쪽·따닥·폭탄·흔들기)·정산(고박·피박·광박)·나가리·국화잔 선택. Phase 3+ polish — 약 콜아웃·gather-long·손패 가로 스크롤·보드 세로 스크롤(3P)·애니 앵커 remeasure·collect sourceTableIndex·AI 손패 mini·턴 페이싱(수집 전 0.5s·AI 1.2s)·playHand 타겟 슬롯 수정·특수기술 모달. Post-Phase 4 — 턴 힌트(설정 토글·시안 글로우·점수+약 진행 휴리스틱). **승진제** v1 완료·수동 QA 통과(인턴→사장, 홈/결과/설정 UI, PromotionOverlay). Phase 5 — EAS 빌드·스토어 배포. 딜 애니메이션·조커 카드·Career 전용 화면·Rules 승진 섹션은 미구현(optional).
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩, 앱 아이콘, 기본 폴더 구조
@@ -57,8 +57,8 @@ todos:
     content: EAS 빌드, Android/iOS 스토어 배포
     status: pending
   - id: career-progression
-    content: 승진제 메타 진행 — 인턴→사장 직급, 연승·AI 난이도 조건, 홈/결과 UI (design + 구현 순서 documented)
-    status: pending
+    content: 승진제 메타 진행 — 인턴→사장 직급, 연승·AI 난이도 조건, 홈/결과 UI (v1 구현 + 수동 QA 통과)
+    status: completed
 isProject: true
 ---
 
@@ -86,7 +86,7 @@ Rules references:
 | **P1** | **AI difficulty** — 초보 / 중급 / 고급 / 전문가 (Settings; Home Play uses defaults) |
 | **P1** | 맞고 (2P vs AI) + 고스톱 (1 human + 2 AI) + 화투 심플 — all playable |
 | **P2** | Online multiplayer (out of scope v1); bonus/joker deck cards (no art yet) |
-| **P2** | **승진제 (Career Mode)** — 판 점수 대신(또는 병행) 직급 승진으로 장기 목표 제공 (see [Career Progression](#career-progression-승진제--design)) |
+| **P2** | **승진제 (Career Mode)** — ✅ v1 shipped — 직급 승진 메타 진행 (see [Career Progression](#career-progression-승진제--design)) |
 
 ---
 
@@ -338,7 +338,7 @@ Optional **턴 힌트** — Settings → Gameplay → **Turn Hints** (`hintsEnab
 
 ## Career Progression (승진제) — design
 
-> **Status:** design doc only — not implemented. In-hand **yaku scoring** (광·띠·열끗·피, Go/Stop) stays as-is for gameplay; 승진제 is a **meta layer** on top of match results (win / loss vs AI).
+> **Status:** ✅ **v1 implemented** — manual QA passed (2026-08-18). In-hand **yaku scoring** (광·띠·열끗·피, Go/Stop) stays as-is for gameplay; 승진제 is a **meta layer** on top of match results (win / loss vs AI). Optional v1.1: Rules 승진 섹션, `app/career.tsx` 사다리 화면.
 
 ### Concept
 
@@ -643,16 +643,16 @@ Store in **AsyncStorage** (`careerState` key), same pattern as `SettingsProvider
 | **Turn hints** | Allowed in career mode (player choice) |
 | **나가리 / handMultiplier** | v1: replay does not affect streak; settlement still applies to match outcome |
 
-### Acceptance criteria (when implemented)
+### Acceptance criteria (v1 — manual QA passed 2026-08-18)
 
-- [ ] New player starts at **인턴**, `promotionWins: 0`
-- [ ] Win increments win count; **loss does not reset** count (rank unchanged in v1)
-- [ ] Promotion at exact thresholds (3, 5, 7, 10, 5@중급+, 7@고급, 5@전문가); **no rank skip**; wins reset on promote
-- [ ] Wins below required AI difficulty do not increment count (차장+)
-- [ ] Home + result UI show rank and `current/required` progress
-- [ ] Promotion moment shows celebration overlay (EN/KO) — copy per [i18n keys + 확정 카피](#i18n-keys--확정-카피-enko)
-- [ ] `CareerState` persists across app restarts
-- [ ] Free Play mode bypasses career tracking when disabled
+- [x] New player starts at **인턴**, `promotionWins: 0`
+- [x] Win increments win count; **loss does not reset** count (rank unchanged in v1)
+- [x] Promotion at exact thresholds (3, 5, 7, 10, 5@중급+, 7@고급, 5@전문가); **no rank skip**; wins reset on promote
+- [x] Wins below required AI difficulty do not increment count (차장+)
+- [x] Home + result UI show rank and `current/required` progress
+- [x] Promotion moment shows celebration overlay (EN/KO) — copy per [i18n keys + 확정 카피](#i18n-keys--확정-카피-enko)
+- [x] `CareerState` persists across app restarts
+- [x] Free Play mode bypasses career tracking when disabled
 
 ### Phase placement
 

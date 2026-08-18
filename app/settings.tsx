@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OptionPicker } from '../src/components/OptionPicker';
 import { ScreenHeader } from '../src/components/ScreenHeader';
@@ -89,7 +89,15 @@ export default function SettingsScreen() {
             onValueChange={(value) => updateSettings({ careerModeEnabled: value })}
           />
           {settings.careerModeEnabled ? (
-            <Text style={styles.careerRules}>{t('career.rulesSnippet')}</Text>
+            <View style={styles.careerBlock}>
+              <Text style={styles.careerRules}>{t('career.rulesSnippet')}</Text>
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => router.push({ pathname: '/rules', params: { section: 'career' } })}
+              >
+                <Text style={styles.careerLink}>{t('career.rulesLink')}</Text>
+              </Pressable>
+            </View>
           ) : null}
           <SettingsToggleRow
             label={t('settings.hints')}
@@ -155,12 +163,20 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  careerBlock: {
+    gap: 8,
+    paddingHorizontal: 4,
+  },
   careerRules: {
     color: colors.cream,
     opacity: 0.75,
     fontSize: 13,
     lineHeight: 20,
-    paddingHorizontal: 4,
+  },
+  careerLink: {
+    color: colors.gold,
+    fontSize: 14,
+    fontWeight: '600',
   },
   footer: {
     marginTop: 8,

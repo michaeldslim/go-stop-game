@@ -60,6 +60,8 @@ export type TranslationKey =
   | 'rules.special.body'
   | 'rules.september.title'
   | 'rules.september.body'
+  | 'rules.career.title'
+  | 'rules.career.body'
   | 'common.back'
   | 'common.home'
   | 'common.player'
@@ -110,6 +112,7 @@ export type TranslationKey =
   | 'career.modeLabel'
   | 'career.modeDesc'
   | 'career.rulesSnippet'
+  | 'career.rulesLink'
   | 'settings.career';
 
 type TranslationParams = Record<string, string | number>;
@@ -181,6 +184,17 @@ const en: Record<TranslationKey, string> = {
   'rules.september.title': 'September Cup',
   'rules.september.body':
     'The 9월 국화잔 can be scored as either 열끗 (animal) or 쌍피 (double junk, +2 pi). Choose when you collect it.',
+  'rules.career.title': 'Career Mode (Promotion)',
+  'rules.career.body':
+    'Turn on Career mode in Settings to climb from Intern to CEO. Each rank needs match wins vs AI (any mode: Matgo, Go-Stop, Hwatu Simple).\n\n' +
+    '· Intern → Staff: 3 wins\n' +
+    '· Staff → Assistant Manager: 5 wins\n' +
+    '· Assistant Manager → Manager: 7 wins\n' +
+    '· Manager → Deputy Director: 10 wins\n' +
+    '· Deputy Director → Director: 5 wins at Intermediate+ AI\n' +
+    '· Director → Executive VP: 7 wins at Advanced+ AI\n' +
+    '· Executive VP → CEO: 5 wins at Expert AI\n\n' +
+    'Losses do not reset your win count or lower your rank. Only one promotion per match win — no skipping ranks. Wins reset to 0 after each promotion. Nagari does not change progress. Turn off Career mode in Settings to play without tracking.',
   'common.back': '← Back',
   'common.home': '← Home',
   'common.player': 'Player',
@@ -234,6 +248,7 @@ const en: Record<TranslationKey, string> = {
   'career.modeDesc': 'Climb the ranks by winning matches',
   'career.rulesSnippet':
     'Intern→Staff 3 wins · Staff→Assistant 5 · Assistant→Manager 7 · Manager→Deputy 10 · Deputy+ needs higher AI difficulty. Losses do not reset progress.',
+  'career.rulesLink': 'View promotion rules',
   'settings.career': 'Career',
 };
 
@@ -304,6 +319,17 @@ const ko: Record<TranslationKey, string> = {
   'rules.september.title': '9월 국화잔',
   'rules.september.body':
     '9월 국화잔은 열끗 또는 쌍피(+2피)로 채점할 수 있습니다. 가져갈 때 선택하세요.',
+  'rules.career.title': '승진제 (Career Mode)',
+  'rules.career.body':
+    '설정에서 승진 모드를 켜면 인턴에서 사장까지 직급을 올릴 수 있습니다. 맞고·고스톱·화투 심플 등 AI 대전 승리가 승진에 반영됩니다.\n\n' +
+    '· 인턴 → 사원: 3승\n' +
+    '· 사원 → 대리: 5승\n' +
+    '· 대리 → 과장: 7승\n' +
+    '· 과장 → 차장: 10승\n' +
+    '· 차장 → 부장: 중급 이상 AI로 5승\n' +
+    '· 부장 → 전무: 고급 이상 AI로 7승\n' +
+    '· 전무 → 사장: 전문가 AI로 5승\n\n' +
+    '패배해도 승진 카운트와 직급은 유지됩니다. 한 판에 한 단계만 승진하며 직급을 건너뛰지 않습니다. 승진 후 카운트는 0부터 다시 시작합니다. 나가리는 진행에 영향 없습니다. 승진 모드를 끄면 기록 없이 자유 플레이합니다.',
   'common.back': '← 뒤로',
   'common.home': '← 홈',
   'common.player': '플레이어',
@@ -357,6 +383,7 @@ const ko: Record<TranslationKey, string> = {
   'career.modeDesc': '승리 횟수로 직급을 올립니다',
   'career.rulesSnippet':
     '인턴→사원 3승 · 사원→대리 5 · 대리→과장 7 · 과장→차장 10 · 차장+는 더 높은 AI 난이도 필요. 패배해도 진행은 유지됩니다.',
+  'career.rulesLink': '승진 규칙 보기',
   'settings.career': '승진제',
 };
 
@@ -378,12 +405,19 @@ export function translate(
   return text;
 }
 
-export const RULE_SECTION_KEYS = [
-  { title: 'rules.deck.title' as const, body: 'rules.deck.body' as const },
-  { title: 'rules.setup.title' as const, body: 'rules.setup.body' as const },
-  { title: 'rules.turn.title' as const, body: 'rules.turn.body' as const },
-  { title: 'rules.scoring.title' as const, body: 'rules.scoring.body' as const },
-  { title: 'rules.goStop.title' as const, body: 'rules.goStop.body' as const },
-  { title: 'rules.special.title' as const, body: 'rules.special.body' as const },
-  { title: 'rules.september.title' as const, body: 'rules.september.body' as const },
+export const RULE_SECTION_KEYS: RuleSection[] = [
+  { title: 'rules.deck.title', body: 'rules.deck.body' },
+  { title: 'rules.setup.title', body: 'rules.setup.body' },
+  { title: 'rules.turn.title', body: 'rules.turn.body' },
+  { title: 'rules.scoring.title', body: 'rules.scoring.body' },
+  { title: 'rules.goStop.title', body: 'rules.goStop.body' },
+  { title: 'rules.special.title', body: 'rules.special.body' },
+  { title: 'rules.september.title', body: 'rules.september.body' },
+  { title: 'rules.career.title', body: 'rules.career.body', id: 'career' },
 ];
+
+export interface RuleSection {
+  title: TranslationKey;
+  body: TranslationKey;
+  id?: string;
+}
