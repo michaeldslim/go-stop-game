@@ -11,8 +11,8 @@ import { useTranslation } from '../src/i18n/useTranslation';
 import { useSettings } from '../src/settings/SettingsProvider';
 
 /** August bright (8월 광) — copied from assets/cards/3x/aug-bright.png */
-const HOME_LOGO_WIDTH = 136;
-const HOME_LOGO_HEIGHT = 222;
+const HOME_LOGO_WIDTH = 100;
+const HOME_LOGO_HEIGHT = 163;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.hero}>
-        <PlayerAvatar avatarId={settings.playerAvatarId} size="xl" style={styles.homeAvatar} />
+        <PlayerAvatar avatarId={settings.playerAvatarId} size="lg" style={styles.homeAvatar} />
         <Image
           source={require('../assets/home-logo.png')}
           style={styles.logo}
@@ -94,16 +94,17 @@ const styles = StyleSheet.create({
   hero: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    justifyContent: 'flex-start',
+    paddingTop: 28,
+    gap: 6,
   },
   homeAvatar: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   logo: {
     width: HOME_LOGO_WIDTH,
     height: HOME_LOGO_HEIGHT,
-    marginBottom: 8,
+    marginBottom: 4,
     borderRadius: CARD_BORDER_RADIUS,
   },
   titleGroup: {
@@ -111,32 +112,32 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: '700',
     color: colors.gold,
     letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '600',
     color: colors.cream,
     opacity: 0.85,
     letterSpacing: 6,
   },
   careerBadge: {
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: 6,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.gold,
     letterSpacing: 0.5,
   },
   actions: {
-    gap: 12,
+    gap: 8,
   },
   primaryButton: {
     backgroundColor: colors.gold,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 11,
+    borderRadius: 10,
     alignItems: 'center',
   },
   primaryButtonDisabled: {
@@ -144,32 +145,32 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: colors.felt,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
   },
   secondaryButton: {
     borderWidth: 1,
     borderColor: colors.gold,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   secondaryButtonText: {
     color: colors.gold,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   tertiaryButton: {
     borderWidth: 1,
     borderColor: colors.gold,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   tertiaryButtonText: {
     color: colors.cream,
     opacity: 0.75,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
 });
