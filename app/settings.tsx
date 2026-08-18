@@ -83,6 +83,15 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t('settings.gameplay')}</Text>
           <SettingsToggleRow
+            label={t('career.modeLabel')}
+            description={t('career.modeDesc')}
+            value={settings.careerModeEnabled}
+            onValueChange={(value) => updateSettings({ careerModeEnabled: value })}
+          />
+          {settings.careerModeEnabled ? (
+            <Text style={styles.careerRules}>{t('career.rulesSnippet')}</Text>
+          ) : null}
+          <SettingsToggleRow
             label={t('settings.hints')}
             description={t('settings.hintsDesc')}
             value={settings.hintsEnabled}
@@ -145,6 +154,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  careerRules: {
+    color: colors.cream,
+    opacity: 0.75,
+    fontSize: 13,
+    lineHeight: 20,
+    paddingHorizontal: 4,
   },
   footer: {
     marginTop: 8,

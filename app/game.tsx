@@ -2,6 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getCareerProgressCopy } from '../src/career/careerLabels';
+import { useCareer } from '../src/career/CareerProvider';
 import { getCardById } from '../src/cards/getCardById';
 import { CardView } from '../src/components/CardView';
 import { CollectedPileView } from '../src/components/CollectedPileView';
@@ -21,6 +23,7 @@ import { CARD_DIMENSIONS } from '../src/constants/layout';
 import { expandTableCard } from '../src/game/tableCards';
 import { useMatgoGame } from '../src/game/useMatgoGame';
 import { useTranslation } from '../src/i18n/useTranslation';
+import { useSettings } from '../src/settings/SettingsProvider';
 import type { AiDifficulty, GameMode } from '../src/types/game';
 import type { PlayerState } from '../src/types/gameState';
 import type { YakuType } from '../src/game/yaku';
@@ -115,6 +118,8 @@ function GameScreenContent() {
     handMultiplier?: string;
   }>();
   const { t, language } = useTranslation();
+  const { settings } = useSettings();
+  const { careerState, loaded: careerLoaded } = useCareer();
 
   const mode = parseMode(params.mode);
   const difficulty = parseDifficulty(params.difficulty);
@@ -167,6 +172,10 @@ function GameScreenContent() {
   const hasSpecialMoves = canShake || canBomb;
   const bombDeclared =
     humanIndex >= 0 && game.players[humanIndex].scoreMultiplier > 1 && canBomb;
+  const careerChip =
+    settings.careerModeEnabled && careerLoaded
+      ? getCareerProgressCopy(t, careerState).primary
+      : null;
 
   useEffect(() => {
     if (specialMoveTimerRef.current) {
@@ -262,6 +271,14 @@ function GameScreenContent() {
               : t('game.aiTurn')}
         </Text>
       </View>
+
+      {careerChip ? (
+        <View style={styles.careerBar}>
+          <Text style={styles.careerChip} numberOfLines={1}>
+            {careerChip}
+          </Text>
+        </View>
+      ) : null}
 
       <ScrollView
         style={styles.boardScroll}
@@ -493,6 +510,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'right',
+  },
+  careerBar: {
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    alignItems: 'center',
+  },
+  careerChip: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '700',
+    opacity: 0.9,
   },
   boardScroll: {
     flex: 1,

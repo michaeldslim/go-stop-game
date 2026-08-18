@@ -87,7 +87,30 @@ export type TranslationKey =
   | 'result.bonusPiLine'
   | 'result.bonusPiSuffix'
   | 'result.collected'
-  | 'result.playAgain';
+  | 'result.playAgain'
+  | 'career.rank.intern'
+  | 'career.rank.staff'
+  | 'career.rank.assistant'
+  | 'career.rank.manager'
+  | 'career.rank.deputy'
+  | 'career.rank.director'
+  | 'career.rank.executive'
+  | 'career.rank.ceo'
+  | 'career.promoted.title'
+  | 'career.promoted.subtitle'
+  | 'career.ceoReached.title'
+  | 'career.ceoReached.subtitle'
+  | 'career.progress'
+  | 'career.progressNext'
+  | 'career.lossKeepsProgress'
+  | 'career.noProgressDifficulty'
+  | 'career.nagariNoChange'
+  | 'career.homeBadge'
+  | 'career.maxRank'
+  | 'career.modeLabel'
+  | 'career.modeDesc'
+  | 'career.rulesSnippet'
+  | 'settings.career';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -188,6 +211,30 @@ const en: Record<TranslationKey, string> = {
   'result.bonusPiSuffix': ' · bonus pi {count}',
   'result.collected': 'Collected',
   'result.playAgain': 'Play Again',
+  'career.rank.intern': 'Intern',
+  'career.rank.staff': 'Staff',
+  'career.rank.assistant': 'Assistant Manager',
+  'career.rank.manager': 'Manager',
+  'career.rank.deputy': 'Deputy Director',
+  'career.rank.director': 'Director',
+  'career.rank.executive': 'Executive VP',
+  'career.rank.ceo': 'CEO',
+  'career.promoted.title': 'Promoted!',
+  'career.promoted.subtitle': 'You are now {rank}',
+  'career.ceoReached.title': 'Congratulations!',
+  'career.ceoReached.subtitle': 'You are the CEO',
+  'career.progress': '{rank} · {current}/{required} wins',
+  'career.progressNext': 'Next: {nextRank} ({required} wins)',
+  'career.lossKeepsProgress': '{rank} · {current}/{required} wins — still on track',
+  'career.noProgressDifficulty': 'No promotion credit — need {minDifficulty}+',
+  'career.nagariNoChange': 'Nagari — progress unchanged',
+  'career.homeBadge': '{rank} · {current}/{required}',
+  'career.maxRank': '{rank} · top rank',
+  'career.modeLabel': 'Career mode',
+  'career.modeDesc': 'Climb the ranks by winning matches',
+  'career.rulesSnippet':
+    'Intern→Staff 3 wins · Staff→Assistant 5 · Assistant→Manager 7 · Manager→Deputy 10 · Deputy+ needs higher AI difficulty. Losses do not reset progress.',
+  'settings.career': 'Career',
 };
 
 const ko: Record<TranslationKey, string> = {
@@ -287,6 +334,30 @@ const ko: Record<TranslationKey, string> = {
   'result.bonusPiSuffix': ' · 보너스피 {count}',
   'result.collected': '따낸 패',
   'result.playAgain': '다시 하기',
+  'career.rank.intern': '인턴',
+  'career.rank.staff': '사원',
+  'career.rank.assistant': '대리',
+  'career.rank.manager': '과장',
+  'career.rank.deputy': '차장',
+  'career.rank.director': '부장',
+  'career.rank.executive': '전무',
+  'career.rank.ceo': '사장',
+  'career.promoted.title': '승진합니다!',
+  'career.promoted.subtitle': '{rank}으로 승진했습니다',
+  'career.ceoReached.title': '축하합니다!',
+  'career.ceoReached.subtitle': '사장이 되었습니다',
+  'career.progress': '{rank} · {current}/{required}승',
+  'career.progressNext': '다음: {nextRank} ({required}승)',
+  'career.lossKeepsProgress': '{rank} · {current}/{required}승 — 진행 유지',
+  'career.noProgressDifficulty': '승진 카운트 없음 — {minDifficulty} 이상 필요',
+  'career.nagariNoChange': '나가리 — 진행 변동 없음',
+  'career.homeBadge': '{rank} · {current}/{required}',
+  'career.maxRank': '{rank} · 최고 직급',
+  'career.modeLabel': '승진 모드',
+  'career.modeDesc': '승리 횟수로 직급을 올립니다',
+  'career.rulesSnippet':
+    '인턴→사원 3승 · 사원→대리 5 · 대리→과장 7 · 과장→차장 10 · 차장+는 더 높은 AI 난이도 필요. 패배해도 진행은 유지됩니다.',
+  'settings.career': '승진제',
 };
 
 const catalogs: Record<AppLanguage, Record<TranslationKey, string>> = { en, ko };

@@ -2,6 +2,8 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getCareerProgressCopy } from '../src/career/careerLabels';
+import { useCareer } from '../src/career/CareerProvider';
 import { colors } from '../src/constants/colors';
 import { CARD_BORDER_RADIUS } from '../src/constants/layout';
 import { useTranslation } from '../src/i18n/useTranslation';
@@ -15,6 +17,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { settings, loaded } = useSettings();
+  const { careerState, loaded: careerLoaded } = useCareer();
+  const careerBadge =
+    settings.careerModeEnabled && careerLoaded
+      ? getCareerProgressCopy(t, careerState).primary
+      : null;
 
   const startGame = () => {
     if (!loaded) {
@@ -42,6 +49,7 @@ export default function HomeScreen() {
         <View style={styles.titleGroup}>
           <Text style={styles.title}>{t('home.title')}</Text>
           <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
+          {careerBadge ? <Text style={styles.careerBadge}>{careerBadge}</Text> : null}
         </View>
       </View>
 
@@ -100,6 +108,13 @@ const styles = StyleSheet.create({
     color: colors.cream,
     opacity: 0.85,
     letterSpacing: 6,
+  },
+  careerBadge: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.gold,
+    letterSpacing: 0.5,
   },
   actions: {
     gap: 12,

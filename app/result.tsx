@@ -1,16 +1,22 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CollectedPileView } from '../src/components/CollectedPileView';
+import { PromotionOverlay } from '../src/components/PromotionOverlay';
 import { ScreenHeader } from '../src/components/ScreenHeader';
+import { careerRankKey, getCareerResultMessage } from '../src/career/careerLabels';
+import { useCareer } from '../src/career/CareerProvider';
 import { colors } from '../src/constants/colors';
 import { createGame } from '../src/game/createGame';
 import { computeSettlement } from '../src/game/settlement';
 import { calculateScore, calculateHwatuSimpleScore, countCollectedCards, type ScoreBreakdown } from '../src/game/scoring';
 import { useTranslation } from '../src/i18n/useTranslation';
+import { useSettings } from '../src/settings/SettingsProvider';
 import type { AiDifficulty, GameMode } from '../src/types/game';
 import type { CardId, FinishReason } from '../src/types/gameState';
 import type { TranslationKey } from '../src/i18n/translations';
+import type { PromotionResult } from '../src/types/career';
 
 function parseDifficulty(value: string | string[] | undefined): AiDifficulty {
   if (
@@ -108,7 +114,12 @@ export default function ResultScreen() {
     opponentBonusPi?: string;
     winnerIndex?: string;
   }>();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const { settings, loaded: settingsLoaded } = useSettings();
+  const { recordMatchResult, loaded: careerLoaded } = useCareer();
+  const [careerResult, setCareerResult] = useState<PromotionResult | null>(null);
+  const [showPromotionOverlay, setShowPromotionOverlay] = useState(false);
+  const recordedCareerRef = useRef(false);
   const mode = parseMode(params.mode);
   const difficulty = parseDifficulty(params.difficulty);
   const humanScore = Number(params.humanScore ?? 0);
@@ -173,6 +184,53 @@ export default function ResultScreen() {
       ? null
       : countCollectedCards(humanCollected, humanBonusPi, humanFlexRoles);
 
+  useEffect(() => {
+    if (!settingsLoaded || !careerLoaded || recordedCareerRef.current || !settings.careerModeEnabled) {
+      return;
+    }
+
+    recordedCareerRef.current = true;
+    const result = recordMatchResult({
+      won: humanWon,
+      aiDifficulty: difficulty,
+      finishReason,
+    });
+
+    if (result) {
+      setCareerResult(result);
+      if (result.promoted) {
+        setShowPromotionOverlay(true);
+      }
+    }
+  }, [
+    settingsLoaded,
+    careerLoaded,
+    settings.careerModeEnabled,
+    recordMatchResult,
+    humanWon,
+    difficulty,
+    finishReason,
+  ]);
+
+  const careerMessage =
+    settings.careerModeEnabled && careerResult
+      ? getCareerResultMessage(
+          t,
+          language,
+          careerResult,
+          finishReason === 'nagari' ? 'nagari' : finishReason === 'draw' ? 'draw' : undefined,
+        )
+      : null;
+
+  const promotedRank = careerResult?.promoted ?? null;
+  const promotionTitle = promotedRank === 'ceo' ? t('career.ceoReached.title') : t('career.promoted.title');
+  const promotionSubtitle =
+    promotedRank === 'ceo'
+      ? t('career.ceoReached.subtitle')
+      : promotedRank
+        ? t('career.promoted.subtitle', { rank: t(careerRankKey(promotedRank)) })
+        : '';
+
   const playAgain = () => {
     router.replace({
       pathname: '/game',
@@ -225,6 +283,13 @@ export default function ResultScreen() {
           <Text style={styles.nagariHint}>
             {t('result.nagariHint', { multiplier: nextHandMultiplier })}
           </Text>
+        ) : null}
+
+        {careerMessage ? (
+          <View style={styles.careerSection}>
+            <Text style={styles.sectionTitle}>{t('settings.career')}</Text>
+            <Text style={styles.careerMessage}>{careerMessage}</Text>
+          </View>
         ) : null}
 
         {settlement && !isDraw ? (
@@ -292,6 +357,15 @@ export default function ResultScreen() {
           <Text style={styles.playAgainText}>{t('result.playAgain')}</Text>
         </Pressable>
       </ScrollView>
+
+      <PromotionOverlay
+        visible={showPromotionOverlay}
+        title={promotionTitle}
+        subtitle={promotionSubtitle}
+        isCeo={promotedRank === 'ceo'}
+        hapticsEnabled={settings.hapticsEnabled}
+        onComplete={() => setShowPromotionOverlay(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -345,6 +419,18 @@ const styles = StyleSheet.create({
   nagariHint: {
     color: colors.gold,
     fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  careerSection: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  careerMessage: {
+    color: colors.cream,
+    opacity: 0.9,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
     fontWeight: '600',
   },
