@@ -366,54 +366,54 @@ All players **start at 인턴**. 사장 is the final title (no further promotion
 
 ### Promotion requirements
 
-Promotion checks run **after a match win** (human beats AI — any game mode: 맞고 / 고스톱 / 화투 심플). **Loss resets the current promotion streak** for that tier; **rank never drops** below earned tier (forgiving — no demotion in v1).
+Promotion checks run **after a match win** (human beats AI — any game mode: 맞고 / 고스톱 / 화투 심플). **Loss does not reset the win count** toward the next rank; **rank never drops** below earned tier (forgiving — no demotion in v1).
 
 | From → To | Condition | Rationale |
 |-----------|-----------|-----------|
-| **인턴 → 사원** | **3연승** | Quick early wins — onboarding hook |
-| **사원 → 대리** | **5연승** | Slightly longer runway |
-| **대리 → 과장** | **7연승** | First “serious” streak |
-| **과장 → 차장** | **10연승** | Endurance test at default AI |
-| **차장 → 부장** | **중급 이상** AI로 **5연승** | Skill floor rises — can’t grind beginner forever |
-| **부장 → 전무** | **고급** AI로 **7연승** | Strong opponent required |
-| **전무 → 사장** | **전문가** AI로 **5연승** | Final boss — shorter streak but hardest AI |
+| **인턴 → 사원** | **3승** | Quick early wins — onboarding hook |
+| **사원 → 대리** | **5승** | Slightly longer runway |
+| **대리 → 과장** | **7승** | First “serious” grind |
+| **과장 → 차장** | **10승** | Endurance test at default AI |
+| **차장 → 부장** | **중급 이상** AI로 **5승** | Skill floor rises — can’t grind beginner forever |
+| **부장 → 전무** | **고급** AI로 **7승** | Strong opponent required |
+| **전무 → 사장** | **전문가** AI로 **5승** | Final boss — shorter count but hardest AI |
 
 **Notes:**
 
-- “연승” = consecutive **match** wins while pursuing **that** promotion only; one loss → streak resets to 0 for the **next** rank attempt (current rank kept).
-- For tiers with a **minimum AI difficulty**, the streak only counts wins where `aiDifficulty >=` threshold; easier wins still count as match wins but **do not** advance the promotion streak (UI should show “승진 카운트: 2/5 — 중급 이상 필요”).
+- “N승” = cumulative **match** wins while at the **current** rank toward the next promotion; **losses do not reduce** the count (current rank kept).
+- For tiers with a **minimum AI difficulty**, only wins where `aiDifficulty >=` threshold count; easier wins still count as match wins but **do not** advance the promotion counter (UI should show “승진 카운트: 2/5 — 중급 이상 필요”).
 - Recommended default when entering Career: start at **초보** for 인턴~대리; Settings may **suggest** bumping difficulty at 차장+ (not forced).
 
-### 승진 처리 — 건너뛰기 없음, 승진 시 streak 리셋 (v1)
+### 승진 처리 — 건너뛰기 없음, 승진 시 wins 리셋 (v1)
 
-**한 판에 한 단계만** 올라간다. 연승이 다음 직급 조건을 **넘어가도** 직급을 건너뛰지 **않는다**.
+**한 판에 한 단계만** 올라간다. 승리 횟수가 다음 직급 조건을 **넘어가도** 직급을 건너뛰지 **않는다**.
 
 | Rule | Behavior |
 |------|----------|
-| **승진 시** | `promotionStreak` → **0** (다음 직급 카운트 새로 시작) |
-| **초과 연승** | 이월 **없음** — 7승에 과장이 되면 8~10승은 **과장** 구간에서 1/10, 2/10, 3/10으로만 쌓임 |
+| **승진 시** | `promotionWins` → **0** (다음 직급 카운트 새로 시작) |
+| **초과 승리** | 이월 **없음** — 7승에 과장이 되면 8~10승은 **과장** 구간에서 1/10, 2/10, 3/10으로만 쌓임 |
 | **한 판 승리** | 최대 **1회** 승진만 처리 (연쇄 승진 없음) |
 
-**예시 — 대리에서 10연승한 경우**
+**예시 — 대리에서 10승한 경우**
 
-(참고: 인턴에서 **3연승**이면 **사원**이지 대리가 아님. 대리는 사원에서 **5연승** 추가 필요.)
+(참고: 인턴에서 **3승**이면 **사원**이지 대리가 아님. 대리는 사원에서 **5승** 추가 필요.)
 
 ```
-대리 0/7 → … → 6/7 → [7승] 과장 승진! streak 0
+대리 0/7 → … → 6/7 → [7승] 과장 승진! wins 0
 과장 1/10 → 2/10 → 3/10   (남은 3승은 차장까지 7판 더 필요)
 ```
 
 → **차장으로 건너뛰지 않음.** 과장(3/10)에서 멈춤.
 
-**예시 — 사원에서 12연승 (5+7)**
+**예시 — 사원에서 12승 (5+7)**
 
 ```
-사원에서 5승 → 대리 승진, streak 0
-대리에서 7승 → 과장 승진, streak 0
-(12연승이어도 한 번에 과장 이상으로 점프하지 않음)
+사원에서 5승 → 대리 승진, wins 0
+대리에서 7승 → 과장 승진, wins 0
+(12승이어도 한 번에 과장 이상으로 점프하지 않음)
 ```
 
-**패배**는 현재 직급의 `promotionStreak`만 0으로 — 이미 올린 직급은 유지.
+**패배**는 승진 카운트에 **영향 없음** — 이미 올린 직급·누적 승수 유지.
 
 ### Optional v2 rules (not v1 — document for later)
 
@@ -538,11 +538,11 @@ interface PromotionResult {
 
 | Screen | Behavior |
 |--------|----------|
-| **Home** | Rank badge + title under **Hwatu** (e.g. `대리 · 4/7 연승`); optional “Career” vs “Free Play” toggle |
+| **Home** | Rank badge + title under **Hwatu** (e.g. `대리 · 4/7승`); optional “Career” vs “Free Play” toggle |
 | **Settings** | Career mode on/off; show promotion rules link |
 | **Game** | Small rank chip in top bar (cosmetic) |
-| **Result (win)** | Progress bar: `연승 6/7 → 과장`; on promotion → **승진 연출** (banner + haptic + short animation); v2: `promotions[]` 연속 연출 |
-| **Result (loss)** | `연승 초기화 — 대리 유지` (no demotion in v1) |
+| **Result (win)** | Progress: `대리 · 6/7승 → 과장`; on promotion → **승진 연출** (banner + haptic + short animation); v2: `promotions[]` 연속 연출 |
+| **Result (loss)** | `대리 · 2/5승 — 진행 유지` (no demotion in v1) |
 | **Profile / Career** (optional screen) | Ladder diagram, history, highest rank achieved |
 
 ### Persistence
@@ -550,8 +550,8 @@ interface PromotionResult {
 ```ts
 interface CareerState {
   rank: 'intern' | 'staff' | 'assistant' | 'manager' | 'deputy' | 'director' | 'executive' | 'ceo';
-  promotionStreak: number;       // current streak toward next rank
-  requiredStreak: number;        // derived from rank + rules table
+  promotionWins: number;         // cumulative wins toward next rank at current tier
+  requiredWins: number;          // derived from rank + rules table
   minAiDifficulty?: AiDifficulty; // undefined until 차장+
   highestRankAchieved: CareerRank;
   careerModeEnabled: boolean;
@@ -598,11 +598,11 @@ Store in **AsyncStorage** (`careerState` key), same pattern as `SettingsProvider
 
 | Key | KO | EN | When |
 |-----|----|----|------|
-| `career.progress` | {rank} · {current}/{required} 연승 | {rank} · {current}/{required} win streak | 승리, 승진 아님 |
-| `career.progressNext` | 다음: {nextRank} ({required}연승) | Next: {nextRank} ({required} wins) | 보조 한 줄 |
-| `career.streakReset` | 연승이 초기화되었습니다 · {rank} 유지 | Win streak reset · still {rank} | 패배 |
+| `career.progress` | {rank} · {current}/{required}승 | {rank} · {current}/{required} wins | 승리, 승진 아님 |
+| `career.progressNext` | 다음: {nextRank} ({required}승) | Next: {nextRank} ({required} wins) | 보조 한 줄 |
+| `career.lossKeepsProgress` | {rank} · {current}/{required}승 — 진행 유지 | {rank} · {current}/{required} wins — still on track | 패배 |
 | `career.noProgressDifficulty` | 승진 카운트 없음 — {minDifficulty} 이상 필요 | No promotion credit — need {minDifficulty}+ | 차장+ 난이도 미달 승리 |
-| `career.nagariNoChange` | 나가리 — 연승 변동 없음 | Nagari — streak unchanged | 나가리 |
+| `career.nagariNoChange` | 나가리 — 진행 변동 없음 | Nagari — progress unchanged | 나가리 |
 
 `{minDifficulty}` / `{nextRank}` — 기존 `gameOptions` AI 난이도·직급명 라벨 재사용.
 
@@ -612,7 +612,7 @@ Store in **AsyncStorage** (`careerState` key), same pattern as `SettingsProvider
 |-----|----|----|
 | `career.homeBadge` | {rank} · {current}/{required} | {rank} · {current}/{required} |
 | `career.modeLabel` | 승진 모드 | Career mode |
-| `career.modeDesc` | 연승으로 직급을 올립니다 | Climb the ranks with win streaks |
+| `career.modeDesc` | 승리 횟수로 직급을 올립니다 | Climb the ranks by winning matches |
 | `career.rulesLink` | 승진 규칙 보기 | View promotion rules |
 
 #### `translations.ts` 스니펫 (구현 참고)
@@ -623,16 +623,12 @@ Store in **AsyncStorage** (`careerState` key), same pattern as `SettingsProvider
 'career.promoted.subtitle': 'You are now {rank}',
 'career.ceoReached.title': 'Congratulations!',
 'career.ceoReached.subtitle': 'You are the CEO',
-'career.progress': '{rank} · {current}/{required} win streak',
-'career.streakReset': 'Win streak reset · still {rank}',
+'career.progress': '{rank} · {current}/{required} wins',
+'career.lossKeepsProgress': '{rank} · {current}/{required} wins — still on track',
 
 // KO
-'career.promoted.title': '승진합니다!',
-'career.promoted.subtitle': '{rank}(으)로 승진했습니다',
-'career.ceoReached.title': '축하합니다!',
-'career.ceoReached.subtitle': '사장이 되었습니다',
-'career.progress': '{rank} · {current}/{required} 연승',
-'career.streakReset': '연승이 초기화되었습니다 · {rank} 유지',
+'career.progress': '{rank} · {current}/{required}승',
+'career.lossKeepsProgress': '{rank} · {current}/{required}승 — 진행 유지',
 ```
 
 > KO 부제 `{rank}(으)로` — 구현 시 `으로/로` 조사는 간단 헬퍼(`attachRo`) 또는 직급별 `career.promoted.subtitleStaff` … 분리 중 택1. v1은 **「{rank}으로 승진했습니다」** 고정 접미사로 단순화해도 됨.
@@ -649,10 +645,10 @@ Store in **AsyncStorage** (`careerState` key), same pattern as `SettingsProvider
 
 ### Acceptance criteria (when implemented)
 
-- [ ] New player starts at **인턴**, `promotionStreak: 0`
-- [ ] Win increments streak; loss resets streak only (rank unchanged in v1)
-- [ ] Promotion at exact thresholds (3, 5, 7, 10, 5@중급+, 7@고급, 5@전문가); **no rank skip**; streak resets on promote
-- [ ] Wins below required AI difficulty do not increment streak (차장+)
+- [ ] New player starts at **인턴**, `promotionWins: 0`
+- [ ] Win increments win count; **loss does not reset** count (rank unchanged in v1)
+- [ ] Promotion at exact thresholds (3, 5, 7, 10, 5@중급+, 7@고급, 5@전문가); **no rank skip**; wins reset on promote
+- [ ] Wins below required AI difficulty do not increment count (차장+)
 - [ ] Home + result UI show rank and `current/required` progress
 - [ ] Promotion moment shows celebration overlay (EN/KO) — copy per [i18n keys + 확정 카피](#i18n-keys--확정-카피-enko)
 - [ ] `CareerState` persists across app restarts
@@ -677,16 +673,16 @@ Store in **AsyncStorage** (`careerState` key), same pattern as `SettingsProvider
 | `CareerRank`, `CareerState`, `PromotionResult` 타입 | `src/types/career.ts` (new) |
 | 직급별 `requiredStreak` / `minAiDifficulty` 상수 | `src/career/careerRules.ts` (new) |
 | `getPromotionTarget(rank)` → `{ requiredStreak, minAiDifficulty? }` | same |
-| `applyMatchResult(state, { won, aiDifficulty })` → `{ nextState, promoted?, streakReset? }` | `src/career/careerProgress.ts` (new) |
-| 단위 검증 스크립트 (3연승 승진, 패배 시 streak 0, 차장+ 난이도 미달 무시) | `scripts/verify-career-progress.ts` (new) |
+| `applyMatchResult(state, { won, aiDifficulty })` → `{ nextState, promoted?, lost? }` | `src/career/careerProgress.ts` (new) |
+| 단위 검증 스크립트 (3승 승진, 패배 시 wins 유지, 차장+ 난이도 미달 무시) | `scripts/verify-career-progress.ts` (new) |
 
 **여기서 멈추고** `verify-career-progress.ts`만 돌려도 승진 로직 전체를 검증 가능. UI 없이 끝.
 
 **판단 기준 (v1):**
 
 - `won === true` && human beat AI (`winnerIndex === 0` on result) → 승리
-- `finishReason === 'draw' | 'nagari'` → streak **변경 없음** (무승부/나가리는 카운트 안 함)
-- 차장+ : `aiDifficulty`가 `minAiDifficulty` 미만이면 승리해도 `promotionStreak` **증가 안 함**
+- `finishReason === 'draw' | 'nagari'` → wins **변경 없음** (무승부/나가리는 카운트 안 함)
+- 차장+ : `aiDifficulty`가 `minAiDifficulty` 미만이면 승리해도 `promotionWins` **증가 안 함**
 
 #### Step 2 — AsyncStorage + Context
 
@@ -739,8 +735,8 @@ Store in **AsyncStorage** (`careerState` key), same pattern as `SettingsProvider
 한 번에 다 하지 말고 **Step 1 + 2 + 3 (result만)** 까지가 첫 PR:
 
 1. `verify-career-progress.ts` 통과
-2. 인턴 3연승 → 사원 승진이 result 화면에 표시
-3. 패배 시 `연승 초기화` 문구
+2. 인턴 3승 → 사원 승진이 result 화면에 표시
+3. 패배 시 `진행 유지` 문구 (wins 카운트 유지)
 4. Career mode **off**면 기존과 동일 동작
 
 그다음 PR: Home 뱃지 + Settings 토글 + i18n + 승진 연출.
@@ -757,9 +753,9 @@ Store in **AsyncStorage** (`careerState` key), same pattern as `SettingsProvider
 
 1. Settings → Career mode **on**, AI **초보**
 2. 맞고 3판 연속 승 → result에 **사원 승진** 표시
-3. 1판 패 → 연승 0, 직급 **사원 유지**
-4. Career mode **off** → result에 승진 UI 없음, AsyncStorage streak 변경 없음
-5. (차장 테스트) AI **초보**로 승리 → streak 미증가, `중급 이상 필요` 힌트
+3. 1판 패 → wins **유지**, 직급 **사원 유지**
+4. Career mode **off** → result에 승진 UI 없음, AsyncStorage wins 변경 없음
+5. (차장 테스트) AI **초보**로 승리 → wins 미증가, `중급 이상 필요` 힌트
 
 ---
 
