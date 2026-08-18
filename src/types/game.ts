@@ -26,6 +26,7 @@ export interface AppSettings {
   soundEnabled: boolean;
   soundVolume: number;
   hapticsEnabled: boolean;
+  careerModeEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -37,4 +38,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   soundEnabled: true,
   soundVolume: 6,
   hapticsEnabled: true,
+  careerModeEnabled: true,
 };
