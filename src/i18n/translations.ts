@@ -131,7 +131,12 @@ export type TranslationKey =
   | 'career.ladder.progressToNext'
   | 'career.difficultySuggest.body'
   | 'career.difficultySuggest.action'
-  | 'settings.career';
+  | 'settings.career'
+  | 'settings.avatars'
+  | 'settings.playerAvatar'
+  | 'settings.playerAvatarDesc'
+  | 'settings.aiAvatar'
+  | 'settings.aiAvatarDesc';
 
 type TranslationParams = Record<string, string | number>;
 
@@ -287,6 +292,11 @@ const en: Record<TranslationKey, string> = {
     'From {rank} onward, promotion wins only count at {difficulty}+ AI. Your default is lower — bump it to keep progressing.',
   'career.difficultySuggest.action': 'Set default to {difficulty}',
   'settings.career': 'Career',
+  'settings.avatars': 'Avatars',
+  'settings.playerAvatar': 'Your Avatar',
+  'settings.playerAvatarDesc': 'Shown on the home screen, career, and during play',
+  'settings.aiAvatar': 'AI Avatar',
+  'settings.aiAvatarDesc': 'Opponent face in game and results (2nd AI differs in 3-player)',
 };
 
 const ko: Record<TranslationKey, string> = {
@@ -441,6 +451,11 @@ const ko: Record<TranslationKey, string> = {
     '{rank}부터 승진 카운트는 {difficulty} 이상 AI 승리만 인정됩니다. 기본 난이도가 낮아요 — 올리면 승진이 쌓입니다.',
   'career.difficultySuggest.action': '기본 난이도 {difficulty}으로 변경',
   'settings.career': '승진제',
+  'settings.avatars': '아바타',
+  'settings.playerAvatar': '내 아바타',
+  'settings.playerAvatarDesc': '메인, 승진 현황, 게임 중에 표시됩니다',
+  'settings.aiAvatar': 'AI 아바타',
+  'settings.aiAvatarDesc': '게임·결과 화면의 상대 얼굴 (3인 고스톱은 2번째 AI는 다른 얼굴)',
 };
 
 const catalogs: Record<AppLanguage, Record<TranslationKey, string>> = { en, ko };

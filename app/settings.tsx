@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AvatarPicker } from '../src/components/AvatarPicker';
 import { OptionPicker } from '../src/components/OptionPicker';
 import {
   CareerDifficultyBanner,
@@ -56,6 +57,22 @@ export default function SettingsScreen() {
             title: option.labels[option.value],
           }))}
         />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{t('settings.avatars')}</Text>
+          <AvatarPicker
+            label={t('settings.playerAvatar')}
+            description={t('settings.playerAvatarDesc')}
+            value={settings.playerAvatarId}
+            onChange={(playerAvatarId) => updateSettings({ playerAvatarId })}
+          />
+          <AvatarPicker
+            label={t('settings.aiAvatar')}
+            description={t('settings.aiAvatarDesc')}
+            value={settings.aiAvatarId}
+            onChange={(aiAvatarId) => updateSettings({ aiAvatarId })}
+          />
+        </View>
 
         <OptionPicker<AiDifficulty>
           label={t('setup.aiDifficulty')}

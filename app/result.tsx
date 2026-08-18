@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CollectedPileView } from '../src/components/CollectedPileView';
+import { PlayerAvatar } from '../src/components/PlayerAvatar';
 import { PromotionOverlay } from '../src/components/PromotionOverlay';
 import { ScreenHeader } from '../src/components/ScreenHeader';
 import { careerRankKey, getCareerResultMessage } from '../src/career/careerLabels';
 import { useCareer } from '../src/career/CareerProvider';
 import { colors } from '../src/constants/colors';
+import { getOpponentAvatarId } from '../src/constants/avatars';
 import { createGame } from '../src/game/createGame';
 import { computeSettlement } from '../src/game/settlement';
 import { calculateScore, calculateHwatuSimpleScore, countCollectedCards, type ScoreBreakdown } from '../src/game/scoring';
@@ -137,6 +139,9 @@ export default function ResultScreen() {
   const opponentCollectedList = (params.opponentCollected ?? '').split('|');
   const opponentGoCounts = (params.opponentGoCounts ?? '').split('|');
   const opponentBonusPiList = (params.opponentBonusPi ?? '').split('|');
+  const opponentAvatarIds = opponentScores.map((_, index) =>
+    getOpponentAvatarId(settings.playerAvatarId, settings.aiAvatarId, index),
+  );
 
   const humanHwatuScore =
     mode === 'hwatu' ? calculateHwatuSimpleScore(humanCollected) : humanScore;
@@ -253,6 +258,7 @@ export default function ResultScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.scoreRow}>
           <View style={styles.scoreCard}>
+            <PlayerAvatar avatarId={settings.playerAvatarId} size="md" />
             <Text style={styles.scoreLabel}>{t('common.player')}</Text>
             <Text style={[styles.scoreValue, humanWon && styles.winnerScore]}>
               {mode === 'hwatu' ? humanHwatuScore : humanScore}
@@ -265,6 +271,7 @@ export default function ResultScreen() {
             const opponentWon = !humanWon && !isDraw && winner !== 'human' && index === 0 && opponentScores.length === 1;
             return (
               <View key={opponentNames[index] ?? index} style={styles.scoreCard}>
+                <PlayerAvatar avatarId={opponentAvatarIds[index] ?? settings.aiAvatarId} size="md" />
                 <Text style={styles.scoreLabel}>{opponentNames[index] ?? 'AI'}</Text>
                 <Text style={[styles.scoreValue, opponentWon && styles.winnerScore]}>
                   {score}
@@ -343,11 +350,17 @@ export default function ResultScreen() {
 
         <View style={styles.pileSection}>
           <Text style={styles.sectionTitle}>{t('result.collected')}</Text>
-          <Text style={styles.pileLabel}>{t('common.player')}</Text>
+          <View style={styles.pileHeader}>
+            <PlayerAvatar avatarId={settings.playerAvatarId} size="sm" />
+            <Text style={styles.pileLabel}>{t('common.player')}</Text>
+          </View>
           <CollectedPileView cardIds={humanCollected} />
           {opponentCollectedList.map((collected, index) => (
             <View key={opponentNames[index] ?? index}>
-              <Text style={styles.pileLabel}>{opponentNames[index] ?? 'AI'}</Text>
+              <View style={styles.pileHeader}>
+                <PlayerAvatar avatarId={opponentAvatarIds[index] ?? settings.aiAvatarId} size="sm" />
+                <Text style={styles.pileLabel}>{opponentNames[index] ?? 'AI'}</Text>
+              </View>
               <CollectedPileView cardIds={parseCardIds(collected)} />
             </View>
           ))}
@@ -363,6 +376,7 @@ export default function ResultScreen() {
         title={promotionTitle}
         subtitle={promotionSubtitle}
         isCeo={promotedRank === 'ceo'}
+        playerAvatarId={settings.playerAvatarId}
         hapticsEnabled={settings.hapticsEnabled}
         onComplete={() => setShowPromotionOverlay(false)}
       />
@@ -456,6 +470,12 @@ const styles = StyleSheet.create({
   },
   pileSection: {
     gap: 8,
+  },
+  pileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
   },
   pileLabel: {
     color: colors.cream,

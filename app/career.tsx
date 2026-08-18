@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PlayerAvatar } from '../src/components/PlayerAvatar';
 import { ScreenHeader } from '../src/components/ScreenHeader';
 import {
   CareerDifficultyBanner,
@@ -19,6 +20,7 @@ import {
 import { getPromotionTarget } from '../src/career/careerRules';
 import { useCareer } from '../src/career/CareerProvider';
 import { colors } from '../src/constants/colors';
+import type { AvatarId } from '../src/constants/avatars';
 import { useTranslation } from '../src/i18n/useTranslation';
 import { useSettings } from '../src/settings/SettingsProvider';
 import type { CareerRank, CareerState } from '../src/types/career';
@@ -78,7 +80,7 @@ function CareerDisabledState({ onOpenSettings }: { onOpenSettings: () => void })
   );
 }
 
-function CareerSummary({ state }: { state: CareerState }) {
+function CareerSummary({ state, playerAvatarId }: { state: CareerState; playerAvatarId: AvatarId }) {
   const { t } = useTranslation();
   const progress = getCareerProgressCopy(t, state);
   const highestLabel = t(careerRankKey(state.highestRankAchieved));
@@ -86,11 +88,16 @@ function CareerSummary({ state }: { state: CareerState }) {
 
   return (
     <View style={styles.summaryCard}>
-      <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>{t('career.screen.currentRank')}</Text>
-        <Text style={styles.summaryValue}>{progress.primary}</Text>
+      <View style={styles.summaryHeader}>
+        <PlayerAvatar avatarId={playerAvatarId} size="lg" />
+        <View style={styles.summaryText}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>{t('career.screen.currentRank')}</Text>
+            <Text style={styles.summaryValue}>{progress.primary}</Text>
+          </View>
+          {progress.secondary ? <Text style={styles.summaryHint}>{progress.secondary}</Text> : null}
+        </View>
       </View>
-      {progress.secondary ? <Text style={styles.summaryHint}>{progress.secondary}</Text> : null}
       {showHighest ? (
         <View style={[styles.summaryRow, styles.summaryRowSpaced]}>
           <Text style={styles.summaryLabel}>{t('career.screen.highestRank')}</Text>
@@ -185,7 +192,7 @@ export default function CareerScreen() {
           <CareerDisabledState onOpenSettings={() => router.push('/settings')} />
         ) : !loaded ? null : (
           <>
-            <CareerSummary state={careerState} />
+            <CareerSummary state={careerState} playerAvatarId={settings.playerAvatarId} />
 
             {difficultySuggestion ? (
               <CareerDifficultyBanner
@@ -243,6 +250,15 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderColor: 'rgba(201, 162, 39, 0.35)',
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  summaryText: {
+    flex: 1,
+    gap: 6,
   },
   summaryRow: {
     flexDirection: 'row',

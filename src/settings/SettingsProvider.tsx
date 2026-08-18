@@ -1,6 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { DEFAULT_SETTINGS, SOUND_VOLUME_MAX, SOUND_VOLUME_MIN, type AppSettings, type GameSpeed } from '../types/game';
+import {
+  DEFAULT_AI_AVATAR_ID,
+  DEFAULT_PLAYER_AVATAR_ID,
+  resolveAvatarId,
+} from '../constants/avatars';
 
 const STORAGE_KEY = '@hwatu/settings';
 
@@ -40,6 +45,8 @@ function loadSettings(raw: string | null): AppSettings {
       ...parsed,
       soundVolume: resolveSoundVolume(parsed),
       gameSpeed: resolveGameSpeed(parsed),
+      playerAvatarId: resolveAvatarId(parsed.playerAvatarId, DEFAULT_PLAYER_AVATAR_ID),
+      aiAvatarId: resolveAvatarId(parsed.aiAvatarId, DEFAULT_AI_AVATAR_ID),
     };
   } catch {
     return DEFAULT_SETTINGS;

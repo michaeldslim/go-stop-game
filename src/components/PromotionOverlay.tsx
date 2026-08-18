@@ -10,14 +10,16 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { PlayerAvatar } from './PlayerAvatar';
 import { colors } from '../constants/colors';
-import type { CareerRank } from '../types/career';
+import type { AvatarId } from '../constants/avatars';
 
 interface PromotionOverlayProps {
   visible: boolean;
   title: string;
   subtitle: string;
   isCeo: boolean;
+  playerAvatarId: AvatarId;
   hapticsEnabled: boolean;
   onComplete: () => void;
 }
@@ -31,6 +33,7 @@ export function PromotionOverlay({
   title,
   subtitle,
   isCeo,
+  playerAvatarId,
   hapticsEnabled,
   onComplete,
 }: PromotionOverlayProps) {
@@ -134,6 +137,7 @@ export function PromotionOverlay({
         />
         <View style={[styles.banner, { borderColor: accent }]}>
           <View style={[styles.accentBar, { backgroundColor: accent }]} />
+          <PlayerAvatar avatarId={playerAvatarId} size="xl" style={styles.promotionAvatar} />
           <Text style={[styles.title, { color: accent }]}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
@@ -191,6 +195,9 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginBottom: 14,
     opacity: 0.9,
+  },
+  promotionAvatar: {
+    marginBottom: 12,
   },
   title: {
     fontSize: 36,

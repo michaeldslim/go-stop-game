@@ -1,3 +1,6 @@
+import type { AvatarId } from '../constants/avatars';
+import { DEFAULT_AI_AVATAR_ID, DEFAULT_PLAYER_AVATAR_ID } from '../constants/avatars';
+
 export type AiDifficulty = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 export type GameMode = 'matgo' | 'gostop' | 'hwatu';
 export type AppLanguage = 'en' | 'ko';
@@ -27,6 +30,8 @@ export interface AppSettings {
   soundVolume: number;
   hapticsEnabled: boolean;
   careerModeEnabled: boolean;
+  playerAvatarId: AvatarId;
+  aiAvatarId: AvatarId;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -39,4 +44,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   soundVolume: 6,
   hapticsEnabled: true,
   careerModeEnabled: true,
+  playerAvatarId: DEFAULT_PLAYER_AVATAR_ID,
+  aiAvatarId: DEFAULT_AI_AVATAR_ID,
 };

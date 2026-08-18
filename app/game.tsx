@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCareerProgressCopy } from '../src/career/careerLabels';
 import { useCareer } from '../src/career/CareerProvider';
 import { getCardById } from '../src/cards/getCardById';
+import { PlayerAvatar } from '../src/components/PlayerAvatar';
 import { CardView } from '../src/components/CardView';
 import { CollectedPileView } from '../src/components/CollectedPileView';
 import { GoStopModal } from '../src/components/GoStopModal';
@@ -20,6 +21,7 @@ import {
 } from '../src/constants/gameOptions';
 import { colors } from '../src/constants/colors';
 import { CARD_DIMENSIONS } from '../src/constants/layout';
+import { getOpponentAvatarId, type AvatarId } from '../src/constants/avatars';
 import { expandTableCard } from '../src/game/tableCards';
 import { useMatgoGame } from '../src/game/useMatgoGame';
 import { useTranslation } from '../src/i18n/useTranslation';
@@ -76,6 +78,7 @@ function OpponentBar({
   pointsLabel,
   handCountLabel,
   hiddenCardIds,
+  avatarId,
 }: {
   player: PlayerState;
   playerIndex: number;
@@ -85,16 +88,22 @@ function OpponentBar({
   pointsLabel: string;
   handCountLabel: string;
   hiddenCardIds?: Set<string>;
+  avatarId: AvatarId;
 }) {
   return (
     <View style={styles.opponentBar}>
       <View style={styles.opponentInfo}>
-        <Text style={styles.opponentName}>
-          {player.name} · {difficultyLabel}
-        </Text>
-        {isDealer ? <Text style={styles.dealerBadge}>{dealerLabel}</Text> : null}
-        <Text style={styles.scoreBadge}>{pointsLabel}</Text>
-        <Text style={styles.handCount}>{handCountLabel}</Text>
+        <PlayerAvatar avatarId={avatarId} size="sm" />
+        <View style={styles.opponentText}>
+          <Text style={styles.opponentName}>
+            {player.name} · {difficultyLabel}
+          </Text>
+          <View style={styles.opponentMeta}>
+            {isDealer ? <Text style={styles.dealerBadge}>{dealerLabel}</Text> : null}
+            <Text style={styles.scoreBadge}>{pointsLabel}</Text>
+            <Text style={styles.handCount}>{handCountLabel}</Text>
+          </View>
+        </View>
       </View>
       <HandFanView
         cardIds={player.hand}
@@ -163,6 +172,9 @@ function GameScreenContent() {
   const human = game.players.find((player) => player.isHuman) ?? game.players[0];
   const humanIndex = game.players.findIndex((player) => player.isHuman);
   const opponents = game.players.filter((player) => !player.isHuman);
+  const opponentAvatarIds = opponents.map((_, index) =>
+    getOpponentAvatarId(settings.playerAvatarId, settings.aiAvatarId, index),
+  );
   const playableSet = new Set(playableHandCardIds);
   const hiddenCards = inFlightCardId ? new Set([inFlightCardId]) : undefined;
   const hintedHandCards =
@@ -293,7 +305,7 @@ function GameScreenContent() {
         }}
       >
         <View style={styles.topHandDock}>
-          {opponents.map((opponent) => {
+          {opponents.map((opponent, opponentListIndex) => {
             const playerIndex = game.players.findIndex((player) => player.id === opponent.id);
             return (
               <OpponentBar
@@ -306,6 +318,7 @@ function GameScreenContent() {
                 pointsLabel={`${t('game.points', { score: opponent.score })}${opponent.goCount > 0 ? ` · ${opponent.goCount}고` : ''}`}
                 handCountLabel={t('game.handCount', { count: opponent.hand.length })}
                 hiddenCardIds={hiddenCards}
+                avatarId={opponentAvatarIds[opponentListIndex] ?? settings.aiAvatarId}
               />
             );
           })}
@@ -397,7 +410,10 @@ function GameScreenContent() {
 
         <View style={styles.bottomHandDock}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>{t('game.yourHand')}</Text>
+            <View style={styles.playerHeader}>
+              <PlayerAvatar avatarId={settings.playerAvatarId} size="sm" />
+              <Text style={styles.sectionLabel}>{t('game.yourHand')}</Text>
+            </View>
             <View style={styles.playerMeta}>
               {game.dealerIndex === humanIndex ? (
                 <Text style={styles.dealerBadge}>{t('game.dealer')}</Text>
@@ -551,6 +567,15 @@ const styles = StyleSheet.create({
   opponentInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+  },
+  opponentText: {
+    flex: 1,
+    gap: 4,
+  },
+  opponentMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'wrap',
     gap: 8,
   },
@@ -598,6 +623,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   playerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  playerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

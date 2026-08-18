@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { PlayerAvatar } from '../src/components/PlayerAvatar';
 import { getCareerProgressCopy } from '../src/career/careerLabels';
 import { useCareer } from '../src/career/CareerProvider';
 import { colors } from '../src/constants/colors';
@@ -40,6 +41,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.hero}>
+        <PlayerAvatar avatarId={settings.playerAvatarId} size="xl" style={styles.homeAvatar} />
         <Image
           source={require('../assets/home-logo.png')}
           style={styles.logo}
@@ -94,6 +96,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  homeAvatar: {
+    marginBottom: 4,
   },
   logo: {
     width: HOME_LOGO_WIDTH,
