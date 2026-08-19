@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getCareerProgressCopy } from '../src/career/careerLabels';
@@ -122,6 +122,7 @@ function OpponentBar({
 function GameScreenContent() {
   const router = useRouter();
   const { remeasureAll } = useLayoutAnchors();
+  const scrollRef = useRef<ScrollView>(null);
   const params = useLocalSearchParams<{
     mode?: string;
     difficulty?: string;
@@ -135,6 +136,16 @@ function GameScreenContent() {
   const difficulty = parseDifficulty(params.difficulty);
   const handMultiplier = parseHandMultiplier(params.handMultiplier);
   const difficultyOption = getAiDifficultyOption(difficulty);
+
+  const prepareAnimationViewport = useCallback(async () => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+    await remeasureAll();
+  }, [remeasureAll]);
 
   const {
     game,
@@ -165,7 +176,7 @@ function GameScreenContent() {
     dismissGoCallout,
     specialMoveFirstPromptMs,
     turnHint,
-  } = useMatgoGame(mode, difficulty, handMultiplier);
+  } = useMatgoGame(mode, difficulty, handMultiplier, prepareAnimationViewport);
 
   const [showSpecialMoveModal, setShowSpecialMoveModal] = useState(false);
   const specialMoveDismissedRef = useRef(false);
@@ -179,7 +190,15 @@ function GameScreenContent() {
     getOpponentAvatarId(settings.playerAvatarId, settings.aiAvatarId, index),
   );
   const playableSet = new Set(playableHandCardIds);
-  const hiddenCards = inFlightCardId ? new Set([inFlightCardId]) : undefined;
+  const hiddenCards = useMemo(() => {
+    if (!inFlightCardId) {
+      return undefined;
+    }
+    return new Set([inFlightCardId]);
+  }, [inFlightCardId]);
+  const flippedCardOnTable =
+    game.lastFlippedCardId != null &&
+    game.table.some((tableCard) => expandTableCard(tableCard).includes(game.lastFlippedCardId!));
   const hintedHandCards =
     turnHint?.handCardId && !needsTableChoice ? new Set([turnHint.handCardId]) : undefined;
   const hintedTableIndex = turnHint?.tableIndex ?? null;
@@ -263,6 +282,7 @@ function GameScreenContent() {
   }
 
   return (
+    <View style={styles.screen}>
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} hitSlop={8} disabled={isAnimating}>
@@ -296,6 +316,7 @@ function GameScreenContent() {
       ) : null}
 
       <ScrollView
+        ref={scrollRef}
         style={styles.boardScroll}
         contentContainerStyle={styles.boardContent}
         showsVerticalScrollIndicator={false}
@@ -339,19 +360,15 @@ function GameScreenContent() {
         })}
 
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <View style={styles.tableSectionHeader}>
             <Text style={styles.sectionLabel}>{t('game.table')}</Text>
-            <View style={styles.tableHeaderMeta}>
-              <Text style={styles.sectionMeta}>
-                {t('game.cardCount', { count: game.table.length })}
-              </Text>
-              <LayoutAnchor anchorKey={anchorKeys.deck} style={styles.deckSlot}>
-                <CardView card={getCardById('jan-junk-1')} size="pile" faceDown />
-                <Text style={styles.deckCount}>
-                  {t('game.deck', { count: game.deck.length })}
-                </Text>
-              </LayoutAnchor>
-            </View>
+            <Text style={styles.sectionMeta}>
+              {t('game.cardCount', { count: game.table.length })}
+            </Text>
+            <LayoutAnchor anchorKey={anchorKeys.deck} style={styles.deckSlot}>
+              <CardView card={getCardById('jan-junk-1')} size="mini" faceDown />
+              <Text style={styles.deckCount}>{t('game.deck', { count: game.deck.length })}</Text>
+            </LayoutAnchor>
           </View>
           {needsTableChoice ? (
             <Text style={styles.prompt}>
@@ -360,10 +377,12 @@ function GameScreenContent() {
                 : t('game.chooseTable')}
             </Text>
           ) : null}
-          {game.lastFlippedCardId && !hiddenCards?.has(game.lastFlippedCardId) ? (
+          {game.lastFlippedCardId &&
+          !hiddenCards?.has(game.lastFlippedCardId) &&
+          !flippedCardOnTable ? (
             <View style={styles.flippedSlot}>
               <Text style={styles.flippedLabel}>{t('game.flipped')}</Text>
-              <CardView card={getCardById(game.lastFlippedCardId)} size="pile" />
+              <CardView card={getCardById(game.lastFlippedCardId)} size="table" />
             </View>
           ) : null}
           <View style={styles.tableGrid}>
@@ -473,30 +492,38 @@ function GameScreenContent() {
         onJunk={() => chooseSepCup('junk')}
       />
 
-      <TurnAnimationOverlay activeFlight={activeFlight} onFlightComplete={onFlightComplete} />
-
-      <YakuCalloutOverlay
-        yaku={activeYaku}
-        label={activeYaku ? t(YAKU_LABEL_KEYS[activeYaku]) : ''}
-        onComplete={dismissYakuCallout}
-      />
-
-      <GoCalloutOverlay
-        message={
-          activeGoCallout
-            ? t('game.calledGo', {
-                name: activeGoCallout.name,
-                count: activeGoCallout.count,
-              })
-            : null
-        }
-        onComplete={dismissGoCallout}
-      />
     </SafeAreaView>
+
+    <TurnAnimationOverlay
+      activeFlight={activeFlight}
+      onFlightComplete={onFlightComplete}
+    />
+
+    <YakuCalloutOverlay
+      yaku={activeYaku}
+      label={activeYaku ? t(YAKU_LABEL_KEYS[activeYaku]) : ''}
+      onComplete={dismissYakuCallout}
+    />
+
+    <GoCalloutOverlay
+      message={
+        activeGoCallout
+          ? t('game.calledGo', {
+              name: activeGoCallout.name,
+              count: activeGoCallout.count,
+            })
+          : null
+      }
+      onComplete={dismissGoCallout}
+    />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.felt,
@@ -659,14 +686,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  tableHeaderMeta: {
+  tableSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 12,
   },
   deckSlot: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 6,
   },
   flippedSlot: {
     alignItems: 'center',

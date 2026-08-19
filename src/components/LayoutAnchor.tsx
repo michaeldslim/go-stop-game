@@ -18,6 +18,7 @@ type RemeasureFn = (onComplete: () => void) => void;
 
 interface LayoutAnchorContextValue {
   register: (key: string, point: AnchorPoint) => void;
+  unregister: (key: string) => void;
   get: (key: string) => AnchorPoint | undefined;
   remeasureAll: () => Promise<void>;
   subscribeRemeasure: (fn: RemeasureFn) => () => void;
@@ -31,6 +32,10 @@ export function LayoutAnchorProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback((key: string, point: AnchorPoint) => {
     anchors.current[key] = point;
+  }, []);
+
+  const unregister = useCallback((key: string) => {
+    delete anchors.current[key];
   }, []);
 
   const get = useCallback((key: string) => anchors.current[key], []);
@@ -66,11 +71,12 @@ export function LayoutAnchorProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       register,
+      unregister,
       get,
       remeasureAll,
       subscribeRemeasure,
     }),
-    [register, get, remeasureAll, subscribeRemeasure],
+    [register, unregister, get, remeasureAll, subscribeRemeasure],
   );
 
   return <LayoutAnchorContext.Provider value={value}>{children}</LayoutAnchorContext.Provider>;
@@ -89,7 +95,12 @@ interface LayoutAnchorProps extends ViewProps {
   children: ReactNode;
 }
 
-export function LayoutAnchor({ anchorKey, children, style, ...rest }: LayoutAnchorProps) {
+export function LayoutAnchor({
+  anchorKey,
+  children,
+  style,
+  ...rest
+}: LayoutAnchorProps) {
   const context = useContext(LayoutAnchorContext);
   const viewRef = useRef<View>(null);
 
@@ -101,7 +112,7 @@ export function LayoutAnchor({ anchorKey, children, style, ...rest }: LayoutAnch
     );
   }
 
-  const { register, subscribeRemeasure } = context;
+  const { register, unregister, subscribeRemeasure } = context;
 
   const measure = useCallback(
     (onComplete?: () => void) => {
@@ -111,7 +122,8 @@ export function LayoutAnchor({ anchorKey, children, style, ...rest }: LayoutAnch
       }
 
       viewRef.current.measureInWindow((x, y, width, height) => {
-        register(anchorKey, { x: x + width / 2, y: y + height / 2 });
+        const point = { x: x + width / 2, y: y + height / 2 };
+        register(anchorKey, point);
         onComplete?.();
       });
     },
@@ -130,6 +142,12 @@ export function LayoutAnchor({ anchorKey, children, style, ...rest }: LayoutAnch
       measure(onComplete);
     });
   }, [subscribeRemeasure, measure]);
+
+  useEffect(() => {
+    return () => {
+      unregister(anchorKey);
+    };
+  }, [anchorKey, unregister]);
 
   return (
     <View ref={viewRef} onLayout={onLayout} style={style} collapsable={false} {...rest}>
