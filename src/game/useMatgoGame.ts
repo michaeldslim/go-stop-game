@@ -103,6 +103,28 @@ function detectAiGoCall(
   return null;
 }
 
+/** AI 흔들기·폭탄 등 특수 턴 — 카드 사운드 대신 햅틱만 */
+function isAiSpecialTurn(before: MatgoGameState, after: MatgoGameState): boolean {
+  const playerIndex = before.currentPlayerIndex;
+  const player = before.players[playerIndex];
+  if (!player || player.isHuman) {
+    return false;
+  }
+
+  const afterPlayer = after.players[playerIndex];
+  const cardsPlayed = player.hand.length - afterPlayer.hand.length;
+
+  if (cardsPlayed >= 3) {
+    return true;
+  }
+
+  if (player.scoreMultiplier === 1 && afterPlayer.scoreMultiplier > 1) {
+    return true;
+  }
+
+  return false;
+}
+
 export function useMatgoGame(
   mode: GameMode,
   aiDifficulty: AiDifficulty,
@@ -180,10 +202,9 @@ export function useMatgoGame(
       if (settings.hapticsEnabled) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
-      void playEffects(['goStop']);
       setGoCalloutQueue((queue) => [...queue, callout]);
     },
-    [playEffects, settings.hapticsEnabled],
+    [settings.hapticsEnabled],
   );
 
   const notifyTurnEvents = useCallback(
@@ -225,8 +246,13 @@ export function useMatgoGame(
 
       const before = gameRef.current;
       const after = gameReducer(before, action);
+      const aiSpecialTurn = action.type === 'AI_TURN' && isAiSpecialTurn(before, after);
 
-      if (settings.soundEnabled && after.soundEffects.length > 0) {
+      if (aiSpecialTurn && settings.hapticsEnabled) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
+
+      if (settings.soundEnabled && after.soundEffects.length > 0 && !aiSpecialTurn) {
         void playEffects(after.soundEffects);
       }
 
@@ -240,7 +266,7 @@ export function useMatgoGame(
       notifyTurnEvents(before, after);
       dispatch(action);
     },
-    [animateTurn, notifyTurnEvents, playEffects, settings.soundEnabled, stepTiming],
+    [animateTurn, notifyTurnEvents, playEffects, settings.hapticsEnabled, settings.soundEnabled, stepTiming],
   );
 
   useEffect(() => {
