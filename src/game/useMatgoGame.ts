@@ -107,6 +107,7 @@ export function useMatgoGame(
   mode: GameMode,
   aiDifficulty: AiDifficulty,
   handMultiplier = 1,
+  prepareViewport?: () => Promise<void>,
 ) {
   const router = useRouter();
   const { settings } = useSettings();
@@ -138,13 +139,16 @@ export function useMatgoGame(
   } = useTurnAnimation({
     hapticsEnabled: settings.hapticsEnabled,
     stepTiming,
+    prepareViewport,
   });
 
   const boardGame = displayGame ?? game;
 
   useEffect(() => {
-    setDisplayGame(game);
-  }, [game, setDisplayGame]);
+    if (!isAnimating) {
+      setDisplayGame(game);
+    }
+  }, [game, isAnimating, setDisplayGame]);
 
   const enqueueYaku = useCallback(
     (completed: YakuType[]) => {

@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
 import { FlyingCard } from './FlyingCard';
 import type { CardId } from '../types/gameState';
 import type { AnchorPoint } from './LayoutAnchor';
@@ -12,6 +12,7 @@ export interface ActiveFlightState {
   size: CardSize;
   faceDown: boolean;
   flipOnArrival: boolean;
+  flipRevealHoldMs?: number;
   durationMs: number;
 }
 
@@ -20,22 +21,41 @@ interface TurnAnimationOverlayProps {
   onFlightComplete: () => void;
 }
 
-export function TurnAnimationOverlay({ activeFlight, onFlightComplete }: TurnAnimationOverlayProps) {
+export function TurnAnimationOverlay({
+  activeFlight,
+  onFlightComplete,
+}: TurnAnimationOverlayProps) {
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {activeFlight ? (
-        <FlyingCard
-          key={activeFlight.id}
-          cardId={activeFlight.cardId}
-          from={activeFlight.from}
-          to={activeFlight.to}
-          size={activeFlight.size}
-          faceDown={activeFlight.faceDown}
-          flipOnArrival={activeFlight.flipOnArrival}
-          durationMs={activeFlight.durationMs}
-          onComplete={onFlightComplete}
-        />
-      ) : null}
-    </View>
+    <Modal
+      transparent
+      visible={activeFlight !== null}
+      animationType="none"
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
+      supportedOrientations={['portrait', 'landscape']}
+    >
+      <View style={styles.overlay} pointerEvents="none" collapsable={false}>
+        {activeFlight ? (
+          <FlyingCard
+            key={activeFlight.id}
+            cardId={activeFlight.cardId}
+            from={activeFlight.from}
+            to={activeFlight.to}
+            size={activeFlight.size}
+            faceDown={activeFlight.faceDown}
+            flipOnArrival={activeFlight.flipOnArrival}
+            flipRevealHoldMs={activeFlight.flipRevealHoldMs}
+            durationMs={activeFlight.durationMs}
+            onComplete={onFlightComplete}
+          />
+        ) : null}
+      </View>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFill,
+  },
+});

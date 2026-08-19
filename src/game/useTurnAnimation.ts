@@ -10,11 +10,10 @@ import {
 } from './turnSteps';
 import type { GameSpeedTimings } from './gameSpeed';
 
-interface ActiveFlight extends ActiveFlightState {}
-
 interface UseTurnAnimationOptions {
   hapticsEnabled: boolean;
   stepTiming: GameSpeedTimings;
+  prepareViewport?: () => Promise<void>;
 }
 
 function delay(ms: number): Promise<void> {
@@ -38,39 +37,37 @@ function waitForNextFrame(): Promise<void> {
 export function useTurnAnimation({
   hapticsEnabled,
   stepTiming,
+  prepareViewport,
 }: UseTurnAnimationOptions) {
   const { get, remeasureAll } = useLayoutAnchors();
   const [displayGame, setDisplayGame] = useState<MatgoGameState | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [activeFlight, setActiveFlight] = useState<ActiveFlight | null>(null);
+  const [activeFlight, setActiveFlight] = useState<ActiveFlightState | null>(null);
   const flightResolveRef = useRef<(() => void) | null>(null);
+  const flightSeqRef = useRef(0);
 
   const resolveAnchor = useCallback(
     (key: string): AnchorPoint => get(key) ?? fallbackPoint(),
     [get],
   );
 
-  const resolveTableTarget = useCallback(
-    (targetTableIndex: number): AnchorPoint =>
-      get(anchorKeys.table(targetTableIndex)) ??
-      get(anchorKeys.tableCenter) ??
-      fallbackPoint(),
+  const resolveTableCenter = useCallback(
+    (): AnchorPoint => get(anchorKeys.tableCenter) ?? fallbackPoint(),
     [get],
   );
 
   const resolveStepFlight = useCallback(
-    (step: TurnStep, visual: MatgoGameState): ActiveFlight | null => {
+    (step: TurnStep, visual: MatgoGameState): ActiveFlightState | null => {
       switch (step.type) {
         case 'playHand': {
           const from =
             get(anchorKeys.hand(step.playerIndex, step.cardId)) ??
             resolveAnchor(anchorKeys.aiHand(step.playerIndex));
-          const to = resolveTableTarget(step.targetTableIndex);
           return {
             id: `play-${step.cardId}`,
             cardId: step.cardId,
             from,
-            to,
+            to: resolveTableCenter(),
             size: 'hand',
             faceDown: step.playerIndex !== 0,
             flipOnArrival: false,
@@ -78,14 +75,17 @@ export function useTurnAnimation({
           };
         }
         case 'flipDeck': {
+          const tableCenter = resolveTableCenter();
+          const deckFrom = get(anchorKeys.deck) ?? tableCenter;
           return {
             id: `flip-${step.cardId}`,
             cardId: step.cardId,
-            from: resolveAnchor(anchorKeys.deck),
-            to: resolveTableTarget(step.targetTableIndex),
-            size: 'small',
+            from: deckFrom,
+            to: tableCenter,
+            size: 'table',
             faceDown: true,
             flipOnArrival: true,
+            flipRevealHoldMs: stepTiming.flipRevealHold,
             durationMs: stepTiming.flipDeck,
           };
         }
@@ -101,9 +101,7 @@ export function useTurnAnimation({
               return ids.some((id) => step.cardIds.includes(id));
             });
           const from =
-            tableIndex >= 0
-              ? resolveTableTarget(tableIndex)
-              : resolveAnchor(anchorKeys.deck);
+            tableIndex >= 0 ? resolveTableCenter() : resolveAnchor(anchorKeys.deck);
           return {
             id: `collect-${cardId}`,
             cardId,
@@ -115,30 +113,24 @@ export function useTurnAnimation({
             durationMs: stepTiming.collect,
           };
         }
-        case 'stack': {
-          return {
-            id: `stack-${step.flippedCardId}`,
-            cardId: step.flippedCardId,
-            from: resolveAnchor(anchorKeys.deck),
-            to: resolveTableTarget(step.targetTableIndex),
-            size: 'small',
-            faceDown: false,
-            flipOnArrival: false,
-            durationMs: stepTiming.stack,
-          };
-        }
+        case 'stack':
+          return null;
         default:
           return null;
       }
     },
-    [get, resolveAnchor, resolveTableTarget, stepTiming],
+    [get, resolveAnchor, resolveTableCenter, stepTiming],
   );
 
   const waitForFlight = useCallback(
-    (flight: ActiveFlight): Promise<void> =>
+    (flight: ActiveFlightState): Promise<void> =>
       new Promise((resolve) => {
         flightResolveRef.current = resolve;
-        setActiveFlight(flight);
+        flightSeqRef.current += 1;
+        setActiveFlight({
+          ...flight,
+          id: `${flight.id}-${flightSeqRef.current}`,
+        });
       }),
     [],
   );
@@ -161,7 +153,11 @@ export function useTurnAnimation({
       }
 
       await waitForNextFrame();
+      if (step.type === 'flipDeck') {
+        await prepareViewport?.();
+      }
       await remeasureAll();
+      await waitForNextFrame();
 
       const flight = resolveStepFlight(step, visual);
       if (flight) {
@@ -170,7 +166,7 @@ export function useTurnAnimation({
 
       return applyVisualStep(visual, step);
     },
-    [hapticsEnabled, remeasureAll, resolveStepFlight, waitForFlight],
+    [hapticsEnabled, prepareViewport, remeasureAll, resolveStepFlight, waitForFlight],
   );
 
   const animateTurn = useCallback(
@@ -184,6 +180,7 @@ export function useTurnAnimation({
       let visual = before;
       setDisplayGame(before);
       await waitForNextFrame();
+      await prepareViewport?.();
       await remeasureAll();
 
       for (const step of steps) {
@@ -194,7 +191,7 @@ export function useTurnAnimation({
       setDisplayGame(after);
       setIsAnimating(false);
     },
-    [remeasureAll, runStep, stepTiming],
+    [prepareViewport, remeasureAll, runStep, stepTiming],
   );
 
   return {
