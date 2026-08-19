@@ -13,6 +13,7 @@ export interface ActiveFlightState {
   faceDown: boolean;
   flipOnArrival: boolean;
   flipRevealHoldMs?: number;
+  bounceOnArrival?: boolean;
   durationMs: number;
 }
 
@@ -45,6 +46,7 @@ export function TurnAnimationOverlay({
             faceDown={activeFlight.faceDown}
             flipOnArrival={activeFlight.flipOnArrival}
             flipRevealHoldMs={activeFlight.flipRevealHoldMs}
+            bounceOnArrival={activeFlight.bounceOnArrival}
             durationMs={activeFlight.durationMs}
             onComplete={onFlightComplete}
           />

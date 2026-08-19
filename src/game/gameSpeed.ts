@@ -4,6 +4,7 @@ export interface GameSpeedTimings {
   playHand: number;
   flipDeck: number;
   collect: number;
+  stack: number;
   pauseAfterPlay: number;
   pauseAfterFlip: number;
   pauseBeforeCollect: number;
@@ -17,6 +18,7 @@ export const GAME_SPEED_TIMINGS: Record<GameSpeed, GameSpeedTimings> = {
     playHand: 300,
     flipDeck: 340,
     collect: 340,
+    stack: 200,
     pauseAfterPlay: 170,
     pauseAfterFlip: 420,
     pauseBeforeCollect: 420,
@@ -28,6 +30,7 @@ export const GAME_SPEED_TIMINGS: Record<GameSpeed, GameSpeedTimings> = {
     playHand: 210,
     flipDeck: 255,
     collect: 255,
+    stack: 170,
     pauseAfterPlay: 150,
     pauseAfterFlip: 305,
     pauseBeforeCollect: 210,
@@ -39,6 +42,7 @@ export const GAME_SPEED_TIMINGS: Record<GameSpeed, GameSpeedTimings> = {
     playHand: 180,
     flipDeck: 220,
     collect: 220,
+    stack: 140,
     pauseAfterPlay: 150,
     pauseAfterFlip: 250,
     pauseBeforeCollect: 200,

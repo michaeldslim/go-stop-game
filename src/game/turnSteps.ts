@@ -17,17 +17,26 @@ export type TurnStep =
       cardId: CardId;
       playerIndex: number;
       targetTableIndex: number;
+      targetTableCardId?: CardId;
     }
-  | { type: 'collect'; cardIds: CardId[]; playerIndex: number; sourceTableIndex?: number }
+  | {
+      type: 'collect';
+      cardIds: CardId[];
+      playerIndex: number;
+      sourceTableIndex?: number;
+      sourceTableCardId?: CardId;
+    }
   | {
       type: 'flipDeck';
       cardId: CardId;
       targetTableIndex: number;
+      targetTableCardId?: CardId;
     }
   | {
       type: 'stack';
       flippedCardId: CardId;
       targetTableIndex: number;
+      targetTableCardId?: CardId;
       stackTableIndices?: [number, number];
     }
   | { type: 'pause'; durationMs: number };
@@ -147,6 +156,10 @@ function findTableCardIndex(table: TableCard[], cardId: CardId): number | null {
     }
   }
   return null;
+}
+
+function pileFaceCardId(table: TableCard[], index: number): CardId | undefined {
+  return table[index]?.cardId;
 }
 
 function resolveHandPlayTarget(
@@ -283,6 +296,7 @@ export function buildTurnSteps(
         cardIds: flipCollect,
         playerIndex: flipPlayerIndex,
         sourceTableIndex: chosenIndex,
+        sourceTableCardId: pileFaceCardId(before.table, chosenIndex),
       },
     ];
   }
@@ -319,6 +333,7 @@ export function buildTurnSteps(
     cardId: playedCard,
     playerIndex,
     targetTableIndex: handPlayTarget.index,
+    targetTableCardId: handPlayTarget.cardId,
   });
 
   if (handCollect.length > 0) {
@@ -328,6 +343,7 @@ export function buildTurnSteps(
       cardIds: handCollect,
       playerIndex,
       sourceTableIndex: handPlayTarget.index,
+      sourceTableCardId: handPlayTarget.cardId,
     });
   } else {
     steps.push({ type: 'pause', durationMs: timing.pauseAfterPlay });
@@ -346,6 +362,7 @@ export function buildTurnSteps(
       type: 'flipDeck',
       cardId: flippedCard,
       targetTableIndex: flipTarget.index,
+      targetTableCardId: flipTarget.cardId,
     });
     steps.push({ type: 'pause', durationMs: timing.pauseAfterFlip });
 
@@ -356,6 +373,7 @@ export function buildTurnSteps(
         cardIds: flipCollect,
         playerIndex,
         sourceTableIndex: flipTarget.index,
+        sourceTableCardId: flipTarget.cardId,
       });
     } else if (stackPuk) {
       const pukIndices = findTableMatchIndices(tableBeforeFlip, getCardMonth(flippedCard));
@@ -363,6 +381,7 @@ export function buildTurnSteps(
         type: 'stack',
         flippedCardId: flippedCard,
         targetTableIndex: flipTarget.index,
+        targetTableCardId: flipTarget.cardId,
         stackTableIndices:
           pukIndices.length >= 2 ? [pukIndices[0], pukIndices[1]] : undefined,
       });
@@ -421,7 +440,12 @@ export function applyVisualStep(state: MatgoGameState, step: TurnStep): MatgoGam
       next.deck = next.deck.slice(1);
       next.lastFlippedCardId = step.cardId;
       const flipPlayer = next.players[next.currentPlayerIndex];
-      if (!flipPlayer.collected.includes(step.cardId) && !tableCardIds(next).includes(step.cardId)) {
+      const landingOnExistingPile = step.targetTableIndex < next.table.length;
+      if (
+        !landingOnExistingPile &&
+        !flipPlayer.collected.includes(step.cardId) &&
+        !tableCardIds(next).includes(step.cardId)
+      ) {
         next.table = addTableCard(next.table, step.cardId);
       }
       return next;

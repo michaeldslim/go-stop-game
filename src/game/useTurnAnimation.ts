@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, useState } from 'react';
-import type { MatgoGameState } from '../types/gameState';
+import type { MatgoGameState, CardId } from '../types/gameState';
 import type { ActiveFlightState } from '../components/TurnAnimationOverlay';
 import { anchorKeys, useLayoutAnchors, type AnchorPoint } from '../components/LayoutAnchor';
 import {
@@ -56,6 +56,19 @@ export function useTurnAnimation({
     [get],
   );
 
+  const resolveTableAnchor = useCallback(
+    (targetIndex: number, faceCardId?: CardId): AnchorPoint => {
+      if (faceCardId) {
+        const byCard = get(anchorKeys.tableCard(faceCardId));
+        if (byCard) {
+          return byCard;
+        }
+      }
+      return get(anchorKeys.tableSlot(targetIndex)) ?? resolveTableCenter();
+    },
+    [get, resolveTableCenter],
+  );
+
   const resolveStepFlight = useCallback(
     (step: TurnStep, visual: MatgoGameState): ActiveFlightState | null => {
       switch (step.type) {
@@ -67,7 +80,7 @@ export function useTurnAnimation({
             id: `play-${step.cardId}`,
             cardId: step.cardId,
             from,
-            to: resolveTableCenter(),
+            to: resolveTableAnchor(step.targetTableIndex, step.targetTableCardId),
             size: 'hand',
             faceDown: step.playerIndex !== 0,
             flipOnArrival: false,
@@ -75,13 +88,12 @@ export function useTurnAnimation({
           };
         }
         case 'flipDeck': {
-          const tableCenter = resolveTableCenter();
-          const deckFrom = get(anchorKeys.deck) ?? tableCenter;
+          const deckFrom = get(anchorKeys.deck) ?? resolveTableCenter();
           return {
             id: `flip-${step.cardId}`,
             cardId: step.cardId,
             from: deckFrom,
-            to: tableCenter,
+            to: resolveTableAnchor(step.targetTableIndex, step.targetTableCardId),
             size: 'table',
             faceDown: true,
             flipOnArrival: true,
@@ -100,8 +112,13 @@ export function useTurnAnimation({
               const ids = [tableCard.cardId, ...(tableCard.stackedCardIds ?? [])];
               return ids.some((id) => step.cardIds.includes(id));
             });
+          const faceCardId =
+            step.sourceTableCardId ??
+            (tableIndex >= 0 ? visual.table[tableIndex]?.cardId : undefined);
           const from =
-            tableIndex >= 0 ? resolveTableCenter() : resolveAnchor(anchorKeys.deck);
+            tableIndex >= 0
+              ? resolveTableAnchor(tableIndex, faceCardId)
+              : resolveAnchor(anchorKeys.deck);
           return {
             id: `collect-${cardId}`,
             cardId,
@@ -113,13 +130,25 @@ export function useTurnAnimation({
             durationMs: stepTiming.collect,
           };
         }
-        case 'stack':
-          return null;
+        case 'stack': {
+          const target = resolveTableAnchor(step.targetTableIndex, step.targetTableCardId);
+          return {
+            id: `stack-${step.flippedCardId}`,
+            cardId: step.flippedCardId,
+            from: target,
+            to: target,
+            size: 'table',
+            faceDown: false,
+            flipOnArrival: false,
+            bounceOnArrival: true,
+            durationMs: stepTiming.stack,
+          };
+        }
         default:
           return null;
       }
     },
-    [get, resolveAnchor, resolveTableCenter, stepTiming],
+    [get, resolveAnchor, resolveTableAnchor, resolveTableCenter, stepTiming],
   );
 
   const waitForFlight = useCallback(

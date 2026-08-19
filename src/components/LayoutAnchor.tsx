@@ -160,7 +160,10 @@ export const anchorKeys = {
   deck: 'deck',
   hand: (playerIndex: number, cardId: string) => `hand-${playerIndex}-${cardId}`,
   aiHand: (playerIndex: number) => `ai-hand-${playerIndex}`,
-  table: (index: number) => `table-${index}`,
+  /** Face-up pile on the table (stable across index shifts during animation) */
+  tableCard: (cardId: string) => `table-card-${cardId}`,
+  /** Empty landing slot at end of table row */
+  tableSlot: (index: number) => `table-slot-${index}`,
   tableCenter: 'table-center',
   pile: (playerIndex: number) => `pile-${playerIndex}`,
 };

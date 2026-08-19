@@ -398,8 +398,8 @@ function GameScreenContent() {
 
               return (
                 <LayoutAnchor
-                  key={`table-${index}-${tableCard.cardId}`}
-                  anchorKey={anchorKeys.table(index)}
+                  key={`table-card-${tableCard.cardId}`}
+                  anchorKey={anchorKeys.tableCard(tableCard.cardId)}
                   style={[styles.tableItem, choosable && styles.tableItemChoosable]}
                 >
                   <CardView
@@ -420,7 +420,7 @@ function GameScreenContent() {
             })}
             <LayoutAnchor
               key={`table-slot-${game.table.length}`}
-              anchorKey={anchorKeys.table(game.table.length)}
+              anchorKey={anchorKeys.tableSlot(game.table.length)}
               style={styles.tableEmptySlot}
             >
               {null}
