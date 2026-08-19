@@ -4,41 +4,45 @@ export interface GameSpeedTimings {
   playHand: number;
   flipDeck: number;
   collect: number;
-  stack: number;
   pauseAfterPlay: number;
+  pauseAfterFlip: number;
   pauseBeforeCollect: number;
+  flipRevealHold: number;
   aiTurnDelayMs: number;
   specialMoveFirstPromptMs: number;
 }
 
 export const GAME_SPEED_TIMINGS: Record<GameSpeed, GameSpeedTimings> = {
   slow: {
-    playHand: 250,
-    flipDeck: 300,
-    collect: 350,
-    stack: 200,
-    pauseAfterPlay: 200,
-    pauseBeforeCollect: 500,
+    playHand: 300,
+    flipDeck: 340,
+    collect: 340,
+    pauseAfterPlay: 170,
+    pauseAfterFlip: 420,
+    pauseBeforeCollect: 420,
+    flipRevealHold: 420,
     aiTurnDelayMs: 1200,
     specialMoveFirstPromptMs: 1500,
   },
   medium: {
-    playHand: 250,
-    flipDeck: 300,
-    collect: 350,
-    stack: 200,
-    pauseAfterPlay: 175,
-    pauseBeforeCollect: 250,
+    playHand: 210,
+    flipDeck: 255,
+    collect: 255,
+    pauseAfterPlay: 150,
+    pauseAfterFlip: 305,
+    pauseBeforeCollect: 210,
+    flipRevealHold: 300,
     aiTurnDelayMs: 950,
     specialMoveFirstPromptMs: 750,
   },
   fast: {
-    playHand: 250,
-    flipDeck: 300,
-    collect: 350,
-    stack: 200,
+    playHand: 180,
+    flipDeck: 220,
+    collect: 220,
     pauseAfterPlay: 150,
-    pauseBeforeCollect: 0,
+    pauseAfterFlip: 250,
+    pauseBeforeCollect: 200,
+    flipRevealHold: 200,
     aiTurnDelayMs: 700,
     specialMoveFirstPromptMs: 0,
   },
@@ -46,4 +50,29 @@ export const GAME_SPEED_TIMINGS: Record<GameSpeed, GameSpeedTimings> = {
 
 export function getGameSpeedTimings(speed: GameSpeed): GameSpeedTimings {
   return GAME_SPEED_TIMINGS[speed] ?? GAME_SPEED_TIMINGS.slow;
+}
+
+/** Play hand + flip deck with no table matches (~settings speed subtitle). */
+export function estimateSimpleTurnMs(timing: GameSpeedTimings): number {
+  return (
+    timing.playHand +
+    timing.pauseAfterPlay +
+    timing.flipDeck +
+    timing.flipRevealHold +
+    timing.pauseAfterFlip
+  );
+}
+
+/** Hand match + flip match in one turn (upper-bound pacing benchmark). */
+export function estimateMatchedTurnMs(timing: GameSpeedTimings): number {
+  return (
+    timing.playHand +
+    timing.pauseBeforeCollect +
+    timing.collect +
+    timing.flipDeck +
+    timing.flipRevealHold +
+    timing.pauseAfterFlip +
+    timing.pauseBeforeCollect +
+    timing.collect
+  );
 }
