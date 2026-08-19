@@ -1,15 +1,41 @@
 import type { CardId, MatgoGameState, TableCard } from '../types/gameState';
 import type { GameSpeedTimings } from './gameSpeed';
 import { getGameSpeedTimings } from './gameSpeed';
-import { addTableCard, expandTableCard, findTableMatchIndices, getCardMonth } from './tableCards';
+import {
+  addTableCard,
+  createStackedTableCard,
+  expandTableCard,
+  findTableMatchIndices,
+  getCardMonth,
+  removeTableCards,
+} from './tableCards';
 import { cloneGameState } from './gameUtils';
 
 export type TurnStep =
-  | { type: 'playHand'; cardId: CardId; playerIndex: number; targetTableIndex: number }
+  | {
+      type: 'playHand';
+      cardId: CardId;
+      playerIndex: number;
+      targetTableIndex: number;
+    }
   | { type: 'collect'; cardIds: CardId[]; playerIndex: number; sourceTableIndex?: number }
-  | { type: 'flipDeck'; cardId: CardId; targetTableIndex: number }
-  | { type: 'stack'; flippedCardId: CardId; targetTableIndex: number }
+  | {
+      type: 'flipDeck';
+      cardId: CardId;
+      targetTableIndex: number;
+    }
+  | {
+      type: 'stack';
+      flippedCardId: CardId;
+      targetTableIndex: number;
+      stackTableIndices?: [number, number];
+    }
   | { type: 'pause'; durationMs: number };
+
+interface TableTarget {
+  index: number;
+  cardId?: CardId;
+}
 
 function findRemovedFromHand(beforeHand: CardId[], afterHand: CardId[]): CardId | null {
   for (const cardId of beforeHand) {
@@ -26,9 +52,23 @@ function tableCardIds(state: MatgoGameState): CardId[] {
 
 function findFlippedCard(before: MatgoGameState, after: MatgoGameState): CardId | null {
   if (after.deck.length >= before.deck.length) {
+    if (before.pendingAction?.type === 'chooseFlipMatch') {
+      return before.pendingAction.flippedCardId;
+    }
     return null;
   }
-  return after.lastFlippedCardId;
+
+  // endTurn clears lastFlippedCardId — infer from deck diff (most reliable).
+  const removedFromDeck = before.deck.filter((cardId) => !after.deck.includes(cardId));
+  if (removedFromDeck.length > 0) {
+    return removedFromDeck[0];
+  }
+
+  if (after.lastFlippedCardId) {
+    return after.lastFlippedCardId;
+  }
+
+  return null;
 }
 
 function newlyCollected(before: MatgoGameState, after: MatgoGameState, playerIndex: number): CardId[] {
@@ -109,43 +149,51 @@ function findTableCardIndex(table: TableCard[], cardId: CardId): number | null {
   return null;
 }
 
-function resolveHandPlayTargetIndex(
+function resolveHandPlayTarget(
   before: MatgoGameState,
   playedCard: CardId,
   handCollect: CardId[],
-): number {
+): TableTarget {
   if (handCollect.length === 0) {
-    return before.table.length;
+    return { index: before.table.length };
   }
 
   const tableCollected = handCollect.filter((cardId) => cardId !== playedCard);
   for (const cardId of tableCollected) {
     const index = findTableCardIndex(before.table, cardId);
     if (index !== null) {
-      return index;
+      return { index, cardId: before.table[index].cardId };
     }
   }
 
   const matchedIndex = findCollectedPileIndex(before.table, handCollect);
   if (matchedIndex !== null) {
-    return matchedIndex;
+    return { index: matchedIndex, cardId: before.table[matchedIndex].cardId };
   }
 
-  const month = getCardMonth(playedCard);
-  const matchIndices = findTableMatchIndices(before.table, month);
-  if (matchIndices.length > 0) {
-    return matchIndices[0];
+  if (handCollect.length === 1 && handCollect[0] === playedCard) {
+    return { index: before.table.length };
   }
 
-  return before.table.length;
+  if (before.pendingAction?.type === 'chooseHandMatch') {
+    for (const index of before.pendingAction.matchIndices) {
+      const pileIds = expandTableCard(before.table[index]);
+      if (pileIds.some((cardId) => handCollect.includes(cardId))) {
+        return { index, cardId: before.table[index].cardId };
+      }
+    }
+  }
+
+  return { index: before.table.length };
 }
 
-function resolveFlipDeckTargetIndex(
+function resolveFlipDeckTarget(
   tableBeforeFlip: TableCard[],
   flippedCard: CardId,
   flipCollect: CardId[],
   isPuk: boolean,
-): number {
+  pendingMatchIndices?: number[],
+): TableTarget {
   const month = getCardMonth(flippedCard);
   const matchIndices = findTableMatchIndices(tableBeforeFlip, month);
 
@@ -154,26 +202,47 @@ function resolveFlipDeckTargetIndex(
     for (const cardId of tableCollected) {
       const index = findTableCardIndex(tableBeforeFlip, cardId);
       if (index !== null) {
-        return index;
+        return { index, cardId: tableBeforeFlip[index].cardId };
       }
     }
 
     const matchedIndex = findCollectedPileIndex(tableBeforeFlip, flipCollect);
     if (matchedIndex !== null) {
-      return matchedIndex;
+      return { index: matchedIndex, cardId: tableBeforeFlip[matchedIndex].cardId };
     }
-    return matchIndices[0] ?? tableBeforeFlip.length;
+
+    if (flipCollect.length === 1 && flipCollect[0] === flippedCard) {
+      return { index: tableBeforeFlip.length };
+    }
+
+    if (pendingMatchIndices) {
+      for (const index of pendingMatchIndices) {
+        const pileIds = expandTableCard(tableBeforeFlip[index]);
+        if (pileIds.some((cardId) => flipCollect.includes(cardId))) {
+          return { index, cardId: tableBeforeFlip[index].cardId };
+        }
+      }
+    }
+
+    if (matchIndices.length > 0) {
+      const index = matchIndices[0];
+      return { index, cardId: tableBeforeFlip[index].cardId };
+    }
+
+    return { index: tableBeforeFlip.length };
   }
 
   if (isPuk && matchIndices.length > 0) {
-    return matchIndices[0];
+    const index = matchIndices[0];
+    return { index, cardId: tableBeforeFlip[index].cardId };
   }
 
   if (matchIndices.length === 0) {
-    return tableBeforeFlip.length;
+    return { index: tableBeforeFlip.length };
   }
 
-  return matchIndices[0];
+  const index = matchIndices[0];
+  return { index, cardId: tableBeforeFlip[index].cardId };
 }
 
 /**
@@ -192,6 +261,30 @@ export function buildTurnSteps(
       after.pendingAction.type === 'chooseFlipMatch')
   ) {
     return [];
+  }
+
+  if (before.pendingAction?.type === 'chooseFlipMatch' && !after.pendingAction) {
+    const flipPlayerIndex = before.pendingAction.playerIndex;
+    const flippedCardId = before.pendingAction.flippedCardId;
+    const flipCollect = newlyCollected(before, after, flipPlayerIndex);
+    if (flipCollect.length === 0) {
+      return [];
+    }
+
+    const chosenIndex = before.pendingAction.matchIndices.find((index) => {
+      const pileIds = expandTableCard(before.table[index]);
+      return pileIds.some((cardId) => flipCollect.includes(cardId));
+    }) ?? before.pendingAction.matchIndices[0];
+
+    return [
+      { type: 'pause', durationMs: timing.pauseBeforeCollect },
+      {
+        type: 'collect',
+        cardIds: flipCollect,
+        playerIndex: flipPlayerIndex,
+        sourceTableIndex: chosenIndex,
+      },
+    ];
   }
 
   const playerIndex = before.pendingAction?.playerIndex ?? before.currentPlayerIndex;
@@ -215,13 +308,17 @@ export function buildTurnSteps(
     : [];
   const tableBeforeFlip = reconstructTableAfterHandPlay(before, playedCard, handCollect);
   const stackPuk = flippedCard ? isStackPuk(before, after, flippedCard) : false;
-  const handPlayTargetIndex = resolveHandPlayTargetIndex(before, playedCard, handCollect);
+  const handPlayTarget = resolveHandPlayTarget(before, playedCard, handCollect);
+  const pendingFlipMatchIndices =
+    before.pendingAction?.type === 'chooseFlipMatch'
+      ? before.pendingAction.matchIndices
+      : undefined;
 
   steps.push({
     type: 'playHand',
     cardId: playedCard,
     playerIndex,
-    targetTableIndex: handPlayTargetIndex,
+    targetTableIndex: handPlayTarget.index,
   });
 
   if (handCollect.length > 0) {
@@ -230,25 +327,27 @@ export function buildTurnSteps(
       type: 'collect',
       cardIds: handCollect,
       playerIndex,
-      sourceTableIndex: handPlayTargetIndex,
+      sourceTableIndex: handPlayTarget.index,
     });
   } else {
     steps.push({ type: 'pause', durationMs: timing.pauseAfterPlay });
   }
 
   if (flippedCard) {
-    const flipTargetIndex = resolveFlipDeckTargetIndex(
+    const flipTarget = resolveFlipDeckTarget(
       tableBeforeFlip,
       flippedCard,
       flipCollect,
       stackPuk,
+      pendingFlipMatchIndices,
     );
 
     steps.push({
       type: 'flipDeck',
       cardId: flippedCard,
-      targetTableIndex: flipTargetIndex,
+      targetTableIndex: flipTarget.index,
     });
+    steps.push({ type: 'pause', durationMs: timing.pauseAfterFlip });
 
     if (flipCollect.length > 0) {
       steps.push({ type: 'pause', durationMs: timing.pauseBeforeCollect });
@@ -256,13 +355,16 @@ export function buildTurnSteps(
         type: 'collect',
         cardIds: flipCollect,
         playerIndex,
-        sourceTableIndex: flipTargetIndex,
+        sourceTableIndex: flipTarget.index,
       });
     } else if (stackPuk) {
+      const pukIndices = findTableMatchIndices(tableBeforeFlip, getCardMonth(flippedCard));
       steps.push({
         type: 'stack',
         flippedCardId: flippedCard,
-        targetTableIndex: flipTargetIndex,
+        targetTableIndex: flipTarget.index,
+        stackTableIndices:
+          pukIndices.length >= 2 ? [pukIndices[0], pukIndices[1]] : undefined,
       });
     }
   }
@@ -318,16 +420,31 @@ export function applyVisualStep(state: MatgoGameState, step: TurnStep): MatgoGam
     case 'flipDeck': {
       next.deck = next.deck.slice(1);
       next.lastFlippedCardId = step.cardId;
-      if (!next.players[next.currentPlayerIndex].collected.includes(step.cardId)) {
-        const onTable = tableCardIds(next).includes(step.cardId);
-        if (!onTable && step.targetTableIndex >= next.table.length) {
-          next.table = addTableCard(next.table, step.cardId);
-        }
+      const flipPlayer = next.players[next.currentPlayerIndex];
+      if (!flipPlayer.collected.includes(step.cardId) && !tableCardIds(next).includes(step.cardId)) {
+        next.table = addTableCard(next.table, step.cardId);
       }
       return next;
     }
     case 'stack': {
       next.lastFlippedCardId = step.flippedCardId;
+      if (step.stackTableIndices) {
+        const [indexA, indexB] = step.stackTableIndices;
+        const cardA = next.table[indexA];
+        const cardB = next.table[indexB];
+        if (cardA && cardB) {
+          const stackedIds = [
+            ...expandTableCard(cardA),
+            ...expandTableCard(cardB),
+            step.flippedCardId,
+          ];
+          const stackedCard = createStackedTableCard(stackedIds);
+          const remainingTable = removeTableCards(next.table, [indexA, indexB]).filter(
+            (tableCard) => !expandTableCard(tableCard).includes(step.flippedCardId),
+          );
+          next.table = [...remainingTable, stackedCard];
+        }
+      }
       return next;
     }
     case 'pause':
