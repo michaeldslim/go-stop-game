@@ -8,6 +8,7 @@ import { getCardById } from '../src/cards/getCardById';
 import { PlayerAvatar } from '../src/components/PlayerAvatar';
 import { CardView } from '../src/components/CardView';
 import { CollectedPileView } from '../src/components/CollectedPileView';
+import { GoCalloutOverlay } from '../src/components/GoCalloutOverlay';
 import { GoStopModal } from '../src/components/GoStopModal';
 import { HandFanView } from '../src/components/HandFanView';
 import { LayoutAnchor, LayoutAnchorProvider, anchorKeys, useLayoutAnchors } from '../src/components/LayoutAnchor';
@@ -160,6 +161,8 @@ function GameScreenContent() {
     inFlightCardId,
     activeYaku,
     dismissYakuCallout,
+    activeGoCallout,
+    dismissGoCallout,
     specialMoveFirstPromptMs,
     turnHint,
   } = useMatgoGame(mode, difficulty, handMultiplier);
@@ -476,6 +479,18 @@ function GameScreenContent() {
         yaku={activeYaku}
         label={activeYaku ? t(YAKU_LABEL_KEYS[activeYaku]) : ''}
         onComplete={dismissYakuCallout}
+      />
+
+      <GoCalloutOverlay
+        message={
+          activeGoCallout
+            ? t('game.calledGo', {
+                name: activeGoCallout.name,
+                count: activeGoCallout.count,
+              })
+            : null
+        }
+        onComplete={dismissGoCallout}
       />
     </SafeAreaView>
   );

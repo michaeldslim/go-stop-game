@@ -27,6 +27,7 @@ export type TranslationKey =
   | 'game.yourTurn'
   | 'game.aiTurn'
   | 'game.goStop'
+  | 'game.calledGo'
   | 'game.loadingResults'
   | 'game.dealer'
   | 'game.points'
@@ -77,6 +78,7 @@ export type TranslationKey =
   | 'result.settlement'
   | 'result.netChips'
   | 'result.pays'
+  | 'result.paysLine'
   | 'result.goBak'
   | 'result.piBak'
   | 'result.gwangBak'
@@ -167,6 +169,7 @@ const en: Record<TranslationKey, string> = {
   'game.yourTurn': 'Your turn',
   'game.aiTurn': 'AI turn…',
   'game.goStop': 'Go / Stop',
+  'game.calledGo': '{name} called Go ({count} Go)',
   'game.loadingResults': 'Loading results…',
   'game.dealer': 'Dealer',
   'game.points': '{score} pts',
@@ -231,8 +234,9 @@ const en: Record<TranslationKey, string> = {
   'result.goCount': '{count} Go',
   'result.nagariHint': 'Next hand pays {multiplier}×',
   'result.settlement': 'Settlement',
-  'result.netChips': 'Net chips',
+  'result.netChips': 'Net gain',
   'result.pays': 'pays',
+  'result.paysLine': '{name}: {amount} pts',
   'result.goBak': ' · Go bak',
   'result.piBak': ' · Pi bak',
   'result.gwangBak': ' · Gwang bak',
@@ -326,6 +330,7 @@ const ko: Record<TranslationKey, string> = {
   'game.yourTurn': '플레이어 차례',
   'game.aiTurn': 'AI 차례…',
   'game.goStop': '고 / 스톱',
+  'game.calledGo': '{name} 고! ({count}고)',
   'game.loadingResults': '결과로 이동 중…',
   'game.dealer': '선',
   'game.points': '{score}점',
@@ -390,8 +395,9 @@ const ko: Record<TranslationKey, string> = {
   'result.goCount': '{count}고',
   'result.nagariHint': '다음 판 {multiplier}배 정산',
   'result.settlement': '정산',
-  'result.netChips': '순 획득 칩',
+  'result.netChips': '총 획득 점수',
   'result.pays': '정산',
+  'result.paysLine': '{name}: {amount}점',
   'result.goBak': ' · 고박',
   'result.piBak': ' · 피박',
   'result.gwangBak': ' · 광박',

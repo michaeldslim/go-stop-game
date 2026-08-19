@@ -89,6 +89,20 @@ function shouldAnimate(
   return buildTurnSteps(before, after, timing).length > 0;
 }
 
+function detectAiGoCall(
+  before: MatgoGameState,
+  after: MatgoGameState,
+): { name: string; count: number } | null {
+  for (let index = 0; index < after.players.length; index += 1) {
+    const beforePlayer = before.players[index];
+    const afterPlayer = after.players[index];
+    if (!afterPlayer.isHuman && afterPlayer.goCount > beforePlayer.goCount) {
+      return { name: afterPlayer.name, count: afterPlayer.goCount };
+    }
+  }
+  return null;
+}
+
 export function useMatgoGame(
   mode: GameMode,
   aiDifficulty: AiDifficulty,
@@ -109,6 +123,7 @@ export function useMatgoGame(
 
   const [game, dispatch] = useReducer(gameReducer, initialState);
   const [yakuQueue, setYakuQueue] = useState<YakuType[]>([]);
+  const [goCalloutQueue, setGoCalloutQueue] = useState<{ name: string; count: number }[]>([]);
   const gameRef = useRef(game);
   gameRef.current = game;
 
@@ -149,26 +164,46 @@ export function useMatgoGame(
     setYakuQueue((queue) => queue.slice(1));
   }, []);
 
-  const activeYaku = yakuQueue[0] ?? null;
+  const dismissGoCallout = useCallback(() => {
+    setGoCalloutQueue((queue) => queue.slice(1));
+  }, []);
 
-  const notifyHumanYaku = useCallback(
+  const activeYaku = yakuQueue[0] ?? null;
+  const activeGoCallout = goCalloutQueue[0] ?? null;
+
+  const enqueueGoCallout = useCallback(
+    (callout: { name: string; count: number }) => {
+      if (settings.hapticsEnabled) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
+      void playEffects(['goStop']);
+      setGoCalloutQueue((queue) => [...queue, callout]);
+    },
+    [playEffects, settings.hapticsEnabled],
+  );
+
+  const notifyTurnEvents = useCallback(
     (before: MatgoGameState, after: MatgoGameState) => {
       const humanIndex = before.players.findIndex((player) => player.isHuman);
-      if (humanIndex < 0) {
-        return;
+      if (humanIndex >= 0) {
+        const beforePlayer = before.players[humanIndex];
+        const afterPlayer = after.players[humanIndex];
+        enqueueYaku(
+          detectHumanYakuCompletion(
+            beforePlayer.collected,
+            afterPlayer.collected,
+            beforePlayer.flexCardRoles,
+            afterPlayer.flexCardRoles,
+          ),
+        );
       }
-      const beforePlayer = before.players[humanIndex];
-      const afterPlayer = after.players[humanIndex];
-      enqueueYaku(
-        detectHumanYakuCompletion(
-          beforePlayer.collected,
-          afterPlayer.collected,
-          beforePlayer.flexCardRoles,
-          afterPlayer.flexCardRoles,
-        ),
-      );
+
+      const aiGoCall = detectAiGoCall(before, after);
+      if (aiGoCall) {
+        enqueueGoCallout(aiGoCall);
+      }
     },
-    [enqueueYaku],
+    [enqueueGoCallout, enqueueYaku],
   );
 
   const dispatchAnimated = useCallback(
@@ -192,16 +227,16 @@ export function useMatgoGame(
       }
 
       if (!shouldAnimate(before, after, stepTiming)) {
-        notifyHumanYaku(before, after);
+        notifyTurnEvents(before, after);
         dispatch(action);
         return;
       }
 
       await animateTurn(before, after);
-      notifyHumanYaku(before, after);
+      notifyTurnEvents(before, after);
       dispatch(action);
     },
-    [animateTurn, notifyHumanYaku, playEffects, settings.soundEnabled, stepTiming],
+    [animateTurn, notifyTurnEvents, playEffects, settings.soundEnabled, stepTiming],
   );
 
   useEffect(() => {
@@ -370,6 +405,8 @@ export function useMatgoGame(
     choosableTableIndices,
     activeYaku,
     dismissYakuCallout,
+    activeGoCallout,
+    dismissGoCallout,
     specialMoveFirstPromptMs: stepTiming.specialMoveFirstPromptMs,
     turnHint,
   };

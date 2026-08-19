@@ -307,16 +307,23 @@ export default function ResultScreen() {
               <Text style={styles.chipValue}>
                 {settlement.humanNetChips > 0 ? '+' : ''}
                 {settlement.humanNetChips}
+                {language === 'ko' ? '점' : ''}
               </Text>
             </Text>
-            {settlement.players.map((line) => (
-              <Text key={line.playerIndex} style={styles.breakdownLine}>
-                {opponentNames[line.playerIndex - 1] ?? 'AI'}: {t('result.pays')} {line.totalChips}
-                {line.goBakVictim ? t('result.goBak') : ''}
-                {line.piBak ? t('result.piBak') : ''}
-                {line.gwangBak ? t('result.gwangBak') : ''}
-              </Text>
-            ))}
+            {settlement.players.map((line) => {
+              const payerName =
+                line.playerIndex === 0
+                  ? t('common.player')
+                  : opponentNames[line.playerIndex - 1] ?? 'AI';
+              return (
+                <Text key={line.playerIndex} style={styles.breakdownLine}>
+                  {t('result.paysLine', { name: payerName, amount: line.totalChips })}
+                  {line.goBakVictim ? t('result.goBak') : ''}
+                  {line.piBak ? t('result.piBak') : ''}
+                  {line.gwangBak ? t('result.gwangBak') : ''}
+                </Text>
+              );
+            })}
           </View>
         ) : null}
 
@@ -350,13 +357,15 @@ export default function ResultScreen() {
 
         <View style={styles.pileSection}>
           <Text style={styles.sectionTitle}>{t('result.collected')}</Text>
-          <View style={styles.pileHeader}>
-            <PlayerAvatar avatarId={settings.playerAvatarId} size="sm" />
-            <Text style={styles.pileLabel}>{t('common.player')}</Text>
+          <View style={styles.pileGroup}>
+            <View style={styles.pileHeader}>
+              <PlayerAvatar avatarId={settings.playerAvatarId} size="sm" />
+              <Text style={styles.pileLabel}>{t('common.player')}</Text>
+            </View>
+            <CollectedPileView cardIds={humanCollected} />
           </View>
-          <CollectedPileView cardIds={humanCollected} />
           {opponentCollectedList.map((collected, index) => (
-            <View key={opponentNames[index] ?? index}>
+            <View key={opponentNames[index] ?? index} style={styles.pileGroup}>
               <View style={styles.pileHeader}>
                 <PlayerAvatar avatarId={opponentAvatarIds[index] ?? settings.aiAvatarId} size="sm" />
                 <Text style={styles.pileLabel}>{opponentNames[index] ?? 'AI'}</Text>
@@ -469,6 +478,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   pileSection: {
+    gap: 8,
+  },
+  pileGroup: {
     gap: 8,
   },
   pileHeader: {
