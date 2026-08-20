@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -248,6 +249,13 @@ function GameScreenContent() {
       }
     };
   }, [isHumanTurn, hasSpecialMoves, canShake, canBomb, human.hand.length, isAnimating, specialMoveFirstPromptMs]);
+
+  useEffect(() => {
+    if (!showSpecialMoveModal || !settings.hapticsEnabled) {
+      return;
+    }
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  }, [showSpecialMoveModal, settings.hapticsEnabled]);
 
   const closeSpecialMoveModal = () => {
     specialMoveDismissedRef.current = true;
